@@ -1,12 +1,17 @@
 import smash
 import numpy as np
+import pandas as pd
 import os
 import argparse
 from preprocessing import load_data
 
-print("===================================")
-print(f"smash version: {smash.__version__}")
-print("===================================")
+if smash.__version__ == "0.3.0":
+    print("===================================")
+    print(f"smash version: {smash.__version__}")
+    print("===================================")
+
+else:
+    raise ValueError("Only support for smash 0.3.0 version")
 
 
 DESC_NAME = [
@@ -17,7 +22,6 @@ DESC_NAME = [
     "urbain",
     "resutilpot",
     "vhcapa",
-    # "medcapa",
 ]
 
 BOUNDS = [(2, 2000), (1, 1000), (-20, 5), (1, 200)]
@@ -56,23 +60,16 @@ print("  GENERATE MESH AND SETUP  ")
 print("===========================")
 
 setup, mesh = load_data(
-    os.path.join(args.data, "info_bv.csv"), descriptor_name=DESC_NAME
+    os.path.join(args.data, "info_bv.csv"),
+    start_time="2006-08-01 00:00",
+    end_time="2016-08-01 00:00",
+    descriptor_name=DESC_NAME,
 )
 
 print(f"Studied period: {setup['start_time']} - {setup['end_time']}")
 print(f"Studied descriptors: {setup['descriptor_name']}")
 
-cal_code = [
-    "Y4624010",
-    "Y6434005",
-    "Y5615030",
-    "Y5325010",
-    "Y5032010",
-    "Y5202010",
-    "Y4615020",
-    "Y5424010",
-    "Y5615010",
-]
+cal_code = pd.read_csv(os.path.join(args.data, "cal_code.csv"))["cal"].to_list()
 
 # %%% Create Model object %%%
 print("=====================")

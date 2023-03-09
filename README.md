@@ -1,23 +1,24 @@
-## Required env `smash-dev`:
+## Requirements:
 
 ```bash
 conda activate smash-dev
+pip install seaborn scikit-learn
 ```
 
 ## Run hyper optimization methods:
 
 ```bash
-python3 run_hyper-method.py -d "infoBV/Med-Est" -m uniform -o res/model_ddt/Med-Est
-python3 run_hyper-method.py -d "infoBV/Med-Est" -m distributed -o res/model_ddt/Med-Est
-python3 run_hyper-method.py -d "infoBV/Med-Est" -m hyper-linear -o res/model_ddt/Med-Est
-python3 run_hyper-method.py -d "infoBV/Med-Est" -m hyper-polynomial -o res/model_ddt/Med-Est
-python3 run_hyper-method.py -d "infoBV/Med-Est" -m ann -o res/model_ddt/Med-Est
+python3 run_hyper-method.py -d data/Med-Est/ -m uniform -o models/Med-Est/
+python3 run_hyper-method.py -d data/Med-Est/ -m distributed -o models/Med-Est/
+python3 run_hyper-method.py -d data/Med-Est/ -m hyper-linear -o models/Med-Est/
+python3 run_hyper-method.py -d data/Med-Est/ -m hyper-polynomial -o models/Med-Est/
+python3 run_hyper-method.py -d data/Med-Est/ -m ann -o models/Med-Est/
 ```
 
 ## Run analysis:
 
 ```bash
-python3 run_result-analysis.py -d infoBV/Med-Est/ -m res/model_ddt/Med-Est/ -o res/analysis/Med-Est/
+python3 run_result-analysis.py -d data/Med-Est/ -m models/Med-Est/ -o graphs/Med-Est/
 ```
 ```
 ===================================
@@ -28,5 +29,7 @@ smash version: 0.3.0
 </> Plotting hydrograph (val)...
 </> Plotting boxplots...
 </> Plotting parameters map...
+</> Plotting descriptors map...
+</> Plotting linear covariance matrix...
 ```
 
