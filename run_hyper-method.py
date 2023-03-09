@@ -48,10 +48,9 @@ parser.add_argument(
 args = parser.parse_args()
 
 if not os.path.exists(args.output):
-
     os.makedirs(args.output)
 
-#%%% 	Preprocess data %%%
+# %%% 	Preprocess data %%%
 print("===========================")
 print("  GENERATE MESH AND SETUP  ")
 print("===========================")
@@ -75,7 +74,7 @@ cal_code = [
     "Y5615010",
 ]
 
-#%%% Create Model object %%%
+# %%% Create Model object %%%
 print("=====================")
 print("     MODEL OBJECT    ")
 print("=====================")
@@ -84,13 +83,12 @@ model = smash.Model(setup, mesh)
 print(model)
 
 
-#%%% Optimize Model %%%
+# %%% Optimize Model %%%
 print("=====================")
 print("   MODEL OPTIMIZE    ")
 print("=====================")
 
 if args.method == "uniform":
-
     model.optimize(
         mapping="uniform",
         algorithm="sbs",
@@ -102,7 +100,6 @@ if args.method == "uniform":
     )
 
 elif args.method in ["distributed", "hyper-linear", "hyper-polynomial"]:
-
     model.optimize(
         mapping="uniform",
         algorithm="sbs",
@@ -126,7 +123,6 @@ elif args.method in ["distributed", "hyper-linear", "hyper-polynomial"]:
     )
 
 elif args.method == "ann":
-
     net = smash.Net()
 
     nd = model.input_data.descriptor.shape[-1]

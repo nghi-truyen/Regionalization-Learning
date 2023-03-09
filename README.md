@@ -17,6 +17,16 @@ python3 run_hyper-method.py -d "infoBV/Med-Est" -m ann -o res/model_ddt/Med-Est
 ## Run analysis:
 
 ```bash
-python3 run_result-analysis.py -d infoBV/Med-Est/ -m res/model_ddt/Med-Est/ -o res/res_analysis/Med-Est/
+python3 run_result-analysis.py -d infoBV/Med-Est/ -m res/model_ddt/Med-Est/ -o res/analysis/Med-Est/
+```
+```
+===================================
+smash version: 0.3.0
+===================================
+</> Reading models ddt...: 100%|██████████████████████████████████████████████████████████████████████████████████████| 5/5 [00:01<00:00,  4.65it/s]
+</> Plotting hydrograph (cal)...
+</> Plotting hydrograph (val)...
+</> Plotting boxplots...
+</> Plotting parameters map...
 ```
 

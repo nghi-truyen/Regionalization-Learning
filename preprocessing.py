@@ -23,11 +23,9 @@ def load_data(
     ],
 ):
     if isinstance(catchment, (pd.Series, pd.DataFrame)):
-
         pass
 
     elif isinstance(catchment, str):
-
         catchment = pd.read_csv(catchment)
 
     else:
@@ -38,7 +36,6 @@ def load_data(
     flowdir = smash.load_dataset("flwdir")
 
     if not isinstance(catchment.Code_BV, str):
-
         mesh = smash.generate_mesh(
             flowdir,
             x=catchment.Xexu.values,
@@ -82,7 +79,6 @@ def load_data(
 
 
 def preprocess_visualize(setup, mesh, descriptor_plot=True):
-
     plt.imshow(mesh["flwdst"])
 
     plt.colorbar(label="Flow distance (m)")
@@ -96,7 +92,6 @@ def preprocess_visualize(setup, mesh, descriptor_plot=True):
     canvas = np.where(mesh["active_cell"] == 0, np.nan, canvas)
 
     for pos in mesh["gauge_pos"]:
-
         canvas[tuple(pos)] = 1
 
     plt.imshow(canvas, cmap="Set1_r")
@@ -106,7 +101,6 @@ def preprocess_visualize(setup, mesh, descriptor_plot=True):
     plt.show()
 
     if descriptor_plot:
-
         setup_copy = setup.copy()
 
         setup_copy["end_time"] = pd.Timestamp(setup_copy["start_time"]) + pd.Timedelta(
@@ -116,7 +110,6 @@ def preprocess_visualize(setup, mesh, descriptor_plot=True):
         model = smash.Model(setup_copy, mesh)
 
         for i, d in enumerate(setup_copy["descriptor_name"]):
-
             des = model.input_data.descriptor[..., i]
 
             plt.imshow(des)
