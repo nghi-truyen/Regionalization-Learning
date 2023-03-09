@@ -517,15 +517,15 @@ if __name__ == "__main__":
 
     args = initialize_args()
 
-    # hydrograph(args, "cal", "hydrograph_cal")
-    # hydrograph(args, "val", "hydrograph_val")
+    # cost_descent(args, niter=262)
+
+    hydrograph(args, "cal", "hydrograph_cal")
+    hydrograph(args, "val", "hydrograph_val")
 
     compare_cost(args)
 
-    # param_map(args)
+    param_map(args)
 
-    # cost_descent(args, niter=262)
+    desc_map(args)
 
-    # desc_map(args)
-
-    # linear_cov(args)
+    linear_cov(args)
