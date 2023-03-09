@@ -64,10 +64,6 @@ def initialize_args():  # do not set new attr or modify any attr of args outside
 
     args.cost = {"nse": nse, "kge": kge}
 
-    plt.grid(
-        axis="y"
-    )  # set grid (by default all analysis graphs will be displayed with a grid on their y-axis)
-
     return args
 
 
@@ -109,9 +105,6 @@ def boxplot_cost(args, fobj="nse", figname="boxplots", figsize=(12, 8)):
         {"code": code_catch, "cal_val": cal_val, "Mapping": metd, "NSE": cost}
     )
 
-    # Increase font size
-    sns.set(font_scale=1.2)
-
     # Create the plot
     fig, ax = plt.subplots(figsize=figsize)
     sns.boxplot(
@@ -140,8 +133,11 @@ def boxplot_cost(args, fobj="nse", figname="boxplots", figsize=(12, 8)):
         bbox_to_anchor=(1.3, 1),
     )
 
-    # Set y-axis limits
+    # Set y-axis limits and add grid
     ax.set_ylim([0, 1])
+    ax.yaxis.grid(True)
+
+    ax.xaxis.grid(False)
 
     # Adjust plot spacing
     plt.subplots_adjust(right=0.8)
@@ -200,6 +196,8 @@ def hydrograph(
                 ax.spines["left"].set_visible(False)
                 ax.set_xticks([])
                 ax.set_xticklabels([])
+                ax.yaxis.grid(True)
+                ax.xaxis.grid(False)
 
                 if j > 0:
                     ax.set_yticklabels([])
@@ -316,6 +314,9 @@ def cost_descent(args, niter=250, figsize=(12, 6), figname="cost_descent"):
 ##########
 
 if __name__ == "__main__":
+
+    # Increase font size
+    sns.set(font_scale=1.2)
 
     args = initialize_args()
 
