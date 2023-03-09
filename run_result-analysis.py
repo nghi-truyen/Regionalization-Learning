@@ -133,7 +133,7 @@ def compare_cost(args, fobj="nse", figname="compare_cost", figsize=(15, 8)):
     axes[0].set(title=None, xlabel=None, ylabel="NSE")
 
     # Set y-axis limits and add grid
-    axes[0].set_ylim([0, 1])
+    axes[0].set_ylim([-0.25, 1])
     axes[0].yaxis.grid(True)
 
     axes[0].xaxis.grid(False)
@@ -188,13 +188,15 @@ def compare_cost(args, fobj="nse", figname="compare_cost", figsize=(15, 8)):
         )
         for m, l in zip(["s", "^"], ["Cal", "Val"])
     ]
-    axes[1].legend(handles=legend_elements, loc="lower left", fontsize=14)
+    axes[1].legend(handles=legend_elements, loc="lower left", ncols=2, fontsize=14)
 
     axes[1].xaxis.grid(False)
 
     axes[1].set_xlabel("Catchment", fontsize=13)
 
     axes[1].set_xticklabels([])
+
+    axes[1].set_ylim(axes[0].get_ylim())
 
     fig.legend(
         handles,
@@ -515,15 +517,15 @@ if __name__ == "__main__":
 
     args = initialize_args()
 
-    hydrograph(args, "cal", "hydrograph_cal")
-    hydrograph(args, "val", "hydrograph_val")
+    # hydrograph(args, "cal", "hydrograph_cal")
+    # hydrograph(args, "val", "hydrograph_val")
 
     compare_cost(args)
 
-    param_map(args)
+    # param_map(args)
 
     # cost_descent(args, niter=262)
 
-    desc_map(args)
+    # desc_map(args)
 
-    linear_cov(args)
+    # linear_cov(args)
