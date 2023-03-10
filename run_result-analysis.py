@@ -1,7 +1,6 @@
 import os
 import argparse
 from tqdm import tqdm
-import random
 
 import seaborn as sns
 import numpy as np
@@ -12,6 +11,8 @@ from sklearn.linear_model import LinearRegression
 import matplotlib.pyplot as plt
 
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+from preprocessing import load_data
 
 import smash
 from smash.solver._mwd_cost import nse, kge
@@ -132,11 +133,8 @@ def compare_cost(args, fobj="nse", figname="compare_cost", figsize=(15, 8)):
     # Set title and axis labels
     axes[0].set(title=None, xlabel=None, ylabel="NSE")
 
-    # Set y-axis limits and add grid
+    # Set y-axis limits
     axes[0].set_ylim([-0.25, 1])
-    axes[0].yaxis.grid(True)
-
-    axes[0].xaxis.grid(False)
 
     handles, labels = axes[0].get_legend_handles_labels()  # get labels then remove
     axes[0].legend([], [], frameon=False)
@@ -189,8 +187,6 @@ def compare_cost(args, fobj="nse", figname="compare_cost", figsize=(15, 8)):
         for m, l in zip(["s", "^"], ["Cal", "Val"])
     ]
     axes[1].legend(handles=legend_elements, loc="lower left", ncols=2, fontsize=14)
-
-    axes[1].xaxis.grid(False)
 
     axes[1].set_xlabel("Catchment", fontsize=13)
 
@@ -263,7 +259,6 @@ def hydrograph(
             ax.set_xticks([])
             ax.set_xticklabels([])
 
-            ax.yaxis.grid(True)
             ax.xaxis.grid(False)
 
             if j > 0:  # remove ticklabel
@@ -449,7 +444,7 @@ def linear_cov(
         "vhcapa",
     ],
     figname="linear_cov",
-    figsize=(6, 3.5),
+    figsize=(4, 6),
 ):
     print("</> Plotting linear covariance matrix...")
 
@@ -459,13 +454,13 @@ def linear_cov(
         for name in desc:
             descriptor[name] = np.copy(f[name][:])
 
-    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=figsize, constrained_layout=True)
+    fig, axes = plt.subplots(nrows=3, ncols=1, figsize=figsize, constrained_layout=True)
 
     for k, mod in enumerate(args.models_ddt[2:]):
-        cov_mat = np.zeros((len(desc), len(params)))
+        cov_mat = np.zeros((len(params), len(desc)))
 
-        for i, dei in enumerate(descriptor.values()):
-            for j, par in enumerate(params):
+        for j, dei in enumerate(descriptor.values()):
+            for i, par in enumerate(params):
                 pai = np.copy(mod[par])
 
                 # create a linear regression model
@@ -493,16 +488,132 @@ def linear_cov(
 
         sns.heatmap(
             cov_mat,
-            xticklabels=params,
-            yticklabels=ytl,
+            xticklabels=ytl,
+            yticklabels=params,
             vmin=0,
             vmax=1,
+            square=True,
             cbar=k == 2,
+            cbar_kws=dict(
+                use_gridspec=False, location="bottom", shrink=0.75, aspect=40
+            ),
             ax=axes[k],
             cmap="crest",
         )
 
-        axes[k].set_title(args.methods[k + 2])
+        axes[k].tick_params(
+            labelright=True,
+            labelleft=False,
+            labelbottom=False,
+            labeltop=True,
+            labelrotation=0,
+        )
+
+        axes[k].set_ylabel(args.methods[k + 2], fontsize=13, labelpad=10)
+
+    plt.savefig(os.path.join(args.output, figname + ".png"))
+
+
+def signatures_val(
+    args,
+    sign=["Ebf", "Eff", "Erc", "Epf"],
+    start_time="2016-08-01 00:00",
+    end_time="2018-08-01 00:00",
+    figname="signatures_val",
+    figsize=(12, 8),
+):
+    print("</> Plotting relative error of signatures...")
+
+    # load model to validate
+    model = smash.Model(
+        *load_data(
+            os.path.join(args.data, "info_bv.csv"),
+            start_time=start_time,
+            end_time=end_time,
+            desc_dir="...",
+        )
+    )
+
+    params = model.get_bound_constraints(states=False)["names"]
+
+    df_sign = pd.DataFrame(columns=["code", "mapping"] + sign)
+
+    for model_ddt, method in zip(args.models_ddt, args.methods):
+        for par in params:
+            setattr(model.parameters, par, model_ddt[par])
+
+        model.run(inplace=True)
+
+        res_sign = model.signatures(sign=sign, event_seg=dict(peak_quant=0.995))
+
+        arr_obs = res_sign.event["obs"][sign].to_numpy()
+        arr_sim = res_sign.event["sim"][sign].to_numpy()
+
+        re = np.abs(arr_sim / arr_obs - 1)
+
+        df = pd.DataFrame(data=re, columns=sign)
+
+        df.insert(loc=0, column="code", value=res_sign.event["obs"]["code"].to_list())
+        df.insert(loc=1, column="mapping", value=method)
+
+        df_sign = pd.concat([df_sign, df], ignore_index=True)
+
+    df_sign_1 = df_sign[df_sign["code"].isin(args.cal_code)]
+    df_sign_1.insert(loc=2, column="type_val", value="Temp Val")
+
+    df_sign_2 = df_sign[df_sign["code"].isin(args.val_code)]
+    df_sign_2.insert(loc=2, column="type_val", value="Spatio-Temp Val")
+
+    df_sign = pd.concat([df_sign_1, df_sign_2], ignore_index=True)
+
+    # Create the plot
+    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=figsize)
+
+    for i in range(2):
+        for j in range(2):
+            st = sign[2 * i + j]
+
+            sns.boxplot(
+                data=df_sign,
+                x="type_val",
+                y=st,
+                hue="mapping",
+                width=0.5,
+                palette="deep",
+                showfliers=True,
+                ax=axes[i, j],
+                order=["Temp Val", "Spatio-Temp Val"],
+            )
+
+            # Set title and axis labels
+            axes[i, j].set(title=None, xlabel=None, ylabel=f"RE of {st}")
+
+            if i == 0:
+                axes[i, j].set_xticklabels([])
+
+            if j == 1:
+                axes[i, j].set_yticklabels([])
+
+            # Set y-axis limits
+            axes[i, j].set_ylim([0, 1.2])
+
+            handles, labels = axes[
+                i, j
+            ].get_legend_handles_labels()  # get labels then remove
+            axes[i, j].legend([], [], frameon=False)
+
+    # Add legend
+    fig.legend(
+        handles,
+        labels,
+        title=None,
+        loc="lower center",
+        ncol=len(args.methods),
+        fontsize=13,
+    )
+
+    # Adjust the spacing between subplots
+    fig.subplots_adjust(wspace=0.15, hspace=0.1)
 
     plt.savefig(os.path.join(args.output, figname + ".png"))
 
@@ -529,3 +640,5 @@ if __name__ == "__main__":
     desc_map(args)
 
     linear_cov(args)
+
+    signatures_val(args)

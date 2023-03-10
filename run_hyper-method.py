@@ -63,7 +63,7 @@ setup, mesh = load_data(
     os.path.join(args.data, "info_bv.csv"),
     start_time="2006-08-01 00:00",
     end_time="2016-08-01 00:00",
-    descriptor_name=DESC_NAME,
+    desc_name=DESC_NAME,
 )
 
 print(f"Studied period: {setup['start_time']} - {setup['end_time']}")
