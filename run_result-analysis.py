@@ -349,11 +349,11 @@ def cost_descent(args, niter=250, figsize=(12, 6), figname="cost_descent"):
     for i, mtd in enumerate(args.methods[1:]):
         if mtd == "ann":
             J = np.loadtxt(
-                args.modeldir + "outterminal/" + mtd + ".txt", usecols=(5, 9)
+                os.path.join(args.modeldir, "outterminal/" + mtd + ".txt"), usecols=(5, 9)
             )
         else:
             J = np.loadtxt(
-                args.modeldir + "outterminal/" + mtd + ".txt", usecols=(8, 12)
+                os.path.join(args.modeldir, "outterminal/" + mtd + ".txt"), usecols=(8, 12)
             )
 
         ax.plot(
