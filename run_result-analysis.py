@@ -56,8 +56,6 @@ def initialize_args():  # do not set new attr or modify any attr of args outside
     if not os.path.exists(args.output):
         os.makedirs(args.output)
 
-    args.methods = ["uniform", "distributed", "hyper-linear", "hyper-polynomial", "ann"]
-
     args.cal_code = pd.read_csv(os.path.join(args.data, "cal_code.csv"))[
         "cal"
     ].to_list()
@@ -66,9 +64,12 @@ def initialize_args():  # do not set new attr or modify any attr of args outside
         "val"
     ].to_list()
 
+    args.methods = ["Uniform", "Fully-distributed", "Multi-linear", "Multi-polynomial", "ANN"]
+    args.filename_method = ["uniform", "distributed", "hyper-linear", "hyper-polynomial", "ann"]
+
     args.models_ddt = [
         smash.read_model_ddt(os.path.join(args.modeldir, method + ".hdf5"))
-        for method in tqdm(args.methods, desc="</> Reading models ddt...")
+        for method in tqdm(args.filename_method, desc="</> Reading models ddt...")
     ]
 
     args.cost = {"nse": nse, "kge": kge}
@@ -346,7 +347,7 @@ def cost_descent(args, niter=250, figsize=(12, 6), figname="cost_descent"):
 
     fig, ax = plt.subplots(figsize=figsize)
 
-    for i, mtd in enumerate(args.methods[1:]):
+    for i, mtd in enumerate(args.filename_method[1:]):
         if mtd == "ann":
             J = np.loadtxt(
                 os.path.join(args.modeldir, "outterminal/" + mtd + ".txt"), usecols=(5, 9)
@@ -359,7 +360,7 @@ def cost_descent(args, niter=250, figsize=(12, 6), figname="cost_descent"):
         ax.plot(
             x,
             J[: len(x), 0],
-            label=mtd,
+            label=args.methods[i+1],  # without uniform method
             color=colors[i],
             linestyle=linestyles[i],
             **line_kwargs,
@@ -635,7 +636,7 @@ if __name__ == "__main__":
 
     compare_cost(args)
 
-    param_map(args)
+    param_map(args, figsize=(12,11))
 
     desc_map(args)
 
