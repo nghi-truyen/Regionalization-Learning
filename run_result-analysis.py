@@ -64,8 +64,20 @@ def initialize_args():  # do not set new attr or modify any attr of args outside
         "val"
     ].to_list()
 
-    args.methods = ["Uniform", "Fully-distributed", "Multi-linear", "Multi-polynomial", "ANN"]
-    args.filename_method = ["uniform", "distributed", "hyper-linear", "hyper-polynomial", "ann"]
+    args.methods = [
+        "Uniform",
+        "Fully-distributed",
+        "Multi-linear",
+        "Multi-polynomial",
+        "ANN",
+    ]
+    args.filename_method = [
+        "uniform",
+        "distributed",
+        "hyper-linear",
+        "hyper-polynomial",
+        "ann",
+    ]
 
     args.models_ddt = [
         smash.read_model_ddt(os.path.join(args.modeldir, method + ".hdf5"))
@@ -350,17 +362,19 @@ def cost_descent(args, niter=250, figsize=(12, 6), figname="cost_descent"):
     for i, mtd in enumerate(args.filename_method[1:]):
         if mtd == "ann":
             J = np.loadtxt(
-                os.path.join(args.modeldir, "outterminal/" + mtd + ".txt"), usecols=(5, 9)
+                os.path.join(args.modeldir, "outterminal/" + mtd + ".txt"),
+                usecols=(5, 9),
             )
         else:
             J = np.loadtxt(
-                os.path.join(args.modeldir, "outterminal/" + mtd + ".txt"), usecols=(8, 12)
+                os.path.join(args.modeldir, "outterminal/" + mtd + ".txt"),
+                usecols=(8, 12),
             )
 
         ax.plot(
             x,
             J[: len(x), 0],
-            label=args.methods[i+1],  # without uniform method
+            label=args.methods[i + 1],  # without uniform method
             color=colors[i],
             linestyle=linestyles[i],
             **line_kwargs,
@@ -636,7 +650,7 @@ if __name__ == "__main__":
 
     compare_cost(args)
 
-    param_map(args, figsize=(12,11))
+    param_map(args)
 
     desc_map(args)
 
