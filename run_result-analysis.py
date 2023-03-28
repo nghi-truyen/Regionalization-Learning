@@ -93,7 +93,7 @@ def initialize_args():  # do not set new attr or modify any attr of args outside
 ##############################
 
 
-def compare_cost(args, fobj="NSE", figname="compare_cost", figsize=(15, 9)):
+def compare_cost(args, fobj="NSE", figname="compare_cost", figsize=(15, 8)):
     print("</> Plotting boxplots...")
 
     cost = []
@@ -530,7 +530,7 @@ def signatures_val(
     start_time="2016-08-01 00:00",
     end_time="2018-08-01 00:00",
     figname="signatures_val",
-    figsize=(12, 8),
+    figsize=(12, 6),
 ):
     print("</> Plotting relative error of signatures...")
 
@@ -617,7 +617,7 @@ def signatures_val(
         handles,
         labels,
         title=None,
-        loc="lower center",
+        loc="upper center",
         ncol=len(args.methods),
         fontsize=13,
     )
