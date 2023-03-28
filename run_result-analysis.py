@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import h5py
 from sklearn.linear_model import LinearRegression
+from scipy.stats import gaussian_kde
 
 import matplotlib.pyplot as plt
 
@@ -66,14 +67,12 @@ def initialize_args():  # do not set new attr or modify any attr of args outside
 
     args.methods = [
         "Uniform",
-        "Fully-distributed",
         "Multi-linear",
         "Multi-polynomial",
         "ANN",
     ]
     args.filename_method = [
         "uniform",
-        "distributed",
         "hyper-linear",
         "hyper-polynomial",
         "ann",
@@ -84,7 +83,7 @@ def initialize_args():  # do not set new attr or modify any attr of args outside
         for method in tqdm(args.filename_method, desc="</> Reading models ddt...")
     ]
 
-    args.cost = {"nse": nse, "kge": kge}
+    args.cost = {"NSE": nse, "KGE": kge}
 
     return args
 
@@ -94,7 +93,7 @@ def initialize_args():  # do not set new attr or modify any attr of args outside
 ##############################
 
 
-def compare_cost(args, fobj="nse", figname="compare_cost", figsize=(15, 8)):
+def compare_cost(args, fobj="NSE", figname="compare_cost", figsize=(15, 9)):
     print("</> Plotting boxplots...")
 
     cost = []
@@ -112,7 +111,7 @@ def compare_cost(args, fobj="nse", figname="compare_cost", figsize=(15, 8)):
                 cal_val.append("Cal")
 
             elif code in args.val_code:
-                cal_val.append("Val")
+                cal_val.append("Spatio Val")
 
             else:
                 continue
@@ -124,7 +123,7 @@ def compare_cost(args, fobj="nse", figname="compare_cost", figsize=(15, 8)):
             code_catch.append(code)
 
     df = pd.DataFrame(
-        {"code": code_catch, "cal_val": cal_val, "Mapping": metd, "NSE": cost}
+        {"code": code_catch, "cal_val": cal_val, "Mapping": metd, fobj: cost}
     )
 
     # Create the plot
@@ -134,17 +133,17 @@ def compare_cost(args, fobj="nse", figname="compare_cost", figsize=(15, 8)):
     sns.boxplot(
         data=df,
         x="cal_val",
-        y="NSE",
+        y=fobj,
         hue="Mapping",
         width=0.5,
         palette="deep",
         showfliers=True,
         ax=axes[0],
-        order=["Cal", "Val"],
+        order=["Cal", "Spatio Val"],
     )
 
     # Set title and axis labels
-    axes[0].set(title=None, xlabel=None, ylabel="NSE")
+    axes[0].set(title=None, xlabel=None, ylabel=fobj)
 
     # Set y-axis limits
     axes[0].set_ylim([-0.25, 1])
@@ -152,13 +151,11 @@ def compare_cost(args, fobj="nse", figname="compare_cost", figsize=(15, 8)):
     handles, labels = axes[0].get_legend_handles_labels()  # get labels then remove
     axes[0].legend([], [], frameon=False)
 
-    # NSE by catchment
     colors = [
         "#4c72b0",
         "#dd8452",
         "#55a868",
         "#c44e52",
-        "#8172b3",
     ]  # corresponding colors for palette='deep
 
     cls = dict(zip(args.methods, colors))
@@ -175,14 +172,14 @@ def compare_cost(args, fobj="nse", figname="compare_cost", figsize=(15, 8)):
             )
 
     for i, catch in enumerate(code_catch):  # to separate cal and val code
-        if cal_val[i] == "Val":
+        if cal_val[i] == "Spatio Val":
             axes[1].scatter(
                 catch,
                 cost[i],
                 color=cls[metd[i]],
                 marker="^",
                 s=100,
-                label="Val" if i == 0 else None,
+                label="Spatio Val" if i == 0 else None,
             )
 
     legend_elements = [
@@ -197,13 +194,12 @@ def compare_cost(args, fobj="nse", figname="compare_cost", figsize=(15, 8)):
             markeredgewidth=1,
             markersize=8,
         )
-        for m, l in zip(["s", "^"], ["Cal", "Val"])
+        for m, l in zip(["s", "^"], ["Cal", "Spatio Val"])
     ]
     axes[1].legend(handles=legend_elements, loc="lower left", ncols=2, fontsize=14)
 
-    axes[1].set_xlabel("Catchment", fontsize=13)
-
-    axes[1].set_xticklabels([])
+    axes[1].xaxis.set_major_locator(plt.FixedLocator(axes[1].get_xticks()))
+    axes[1].set_xticklabels(axes[1].get_xticklabels(), rotation=75, fontsize=10)
 
     axes[1].set_ylim(axes[0].get_ylim())
 
@@ -211,7 +207,7 @@ def compare_cost(args, fobj="nse", figname="compare_cost", figsize=(15, 8)):
         handles,
         labels,
         title=None,
-        loc="lower center",
+        loc="upper center",
         ncol=len(args.methods),
         fontsize=14,
     )
@@ -314,7 +310,7 @@ def param_map(
     for j, par in enumerate(params):
         axes[0, j].set_title(params[j])
 
-        for i, mod in enumerate(args.models_ddt[2:]):
+        for i, mod in enumerate(args.models_ddt[1:]):
             axes[i, j].yaxis.grid(False)
             axes[i, j].xaxis.grid(False)
 
@@ -331,7 +327,7 @@ def param_map(
             )
 
             if j == 0:
-                axes[i, j].set_ylabel(args.methods[i + 2], labelpad=10)
+                axes[i, j].set_ylabel(args.methods[i + 1], labelpad=10)
 
         divider = make_axes_locatable(axes[-1, j])
         cax = divider.new_vertical(size="5%", pad=0.2, pack_start=True)
@@ -352,9 +348,8 @@ def cost_descent(args, niter=250, figsize=(12, 6), figname="cost_descent"):
         "#dd8452",
         "#55a868",
         "#c44e52",
-        "#8172b3",
     ]  # corresponding colors for palette='deep'
-    linestyles = ["--", ":", "-.", "-"]
+    linestyles = ["-", ":", "-."]
     line_kwargs = {"linewidth": 2}
 
     fig, ax = plt.subplots(figsize=figsize)
@@ -471,7 +466,7 @@ def linear_cov(
 
     fig, axes = plt.subplots(nrows=3, ncols=1, figsize=figsize, constrained_layout=True)
 
-    for k, mod in enumerate(args.models_ddt[2:]):
+    for k, mod in enumerate(args.models_ddt[1:]):
         cov_mat = np.zeros((len(params), len(desc)))
 
         for j, dei in enumerate(descriptor.values()):
@@ -524,7 +519,7 @@ def linear_cov(
             labelrotation=0,
         )
 
-        axes[k].set_ylabel(args.methods[k + 2], fontsize=13, labelpad=10)
+        axes[k].set_ylabel(args.methods[k + 1], fontsize=13, labelpad=10)
 
     plt.savefig(os.path.join(args.output, figname + ".png"))
 
@@ -633,6 +628,95 @@ def signatures_val(
     plt.savefig(os.path.join(args.output, figname + ".png"))
 
 
+def compare_signature_hist(
+    args,
+    sign=["Ebf", "Eff", "Erc", "Epf"],
+    start_time="2016-08-01 00:00",
+    end_time="2018-08-01 00:00",
+    figname="compare_signature_hist",
+    figsize=(15, 8),
+):
+    print("</> Plotting histograms...")
+
+    colors = [
+        "#4c72b0",
+        "#dd8452",
+        "#55a868",
+        "#c44e52",
+    ]  # corresponding colors for palette='deep
+
+    # load model to validate
+    model = smash.Model(
+        *load_data(
+            os.path.join(args.data, "info_bv.csv"),
+            start_time=start_time,
+            end_time=end_time,
+            desc_dir="...",
+        )
+    )
+
+    params = model.get_bound_constraints(states=False)["names"]
+
+    df_sign = pd.DataFrame(columns=["code", "mapping"] + sign)
+
+    for model_ddt, method in zip(args.models_ddt, args.methods):
+        for par in params:
+            setattr(model.parameters, par, model_ddt[par])
+
+        model.run(inplace=True)
+
+        res_sign = model.signatures(sign=sign, event_seg=dict(peak_quant=0.995))
+
+        arr_obs = res_sign.event["obs"][sign].to_numpy()
+        arr_sim = res_sign.event["sim"][sign].to_numpy()
+
+        re = np.abs(arr_sim / arr_obs - 1)
+
+        df = pd.DataFrame(data=re, columns=sign)
+
+        df.insert(loc=0, column="code", value=res_sign.event["obs"]["code"].to_list())
+        df.insert(loc=1, column="mapping", value=method)
+
+        df_sign = pd.concat([df_sign, df], ignore_index=True)
+
+    df_sign = df_sign[df_sign["code"].isin(args.cal_code)]
+
+    # Create the plot
+    fig, axes = plt.subplots(nrows=len(args.methods), ncols=len(sign), figsize=figsize)
+
+    for i in range(axes.shape[0]):
+        for j in range(axes.shape[1]):
+            x = df_sign[df_sign.mapping == args.methods[i]][sign[j]]
+            x = x[np.isfinite(x)]
+
+            axes[i, j].hist(x, bins=30, color=colors[i], range=[0, 2], density=True)
+
+            density = gaussian_kde(x)
+            x_vals = np.linspace(x.min(), x.max(), 100)
+            axes[i, j].plot(x_vals, density(x_vals), "black", linewidth=0.8)
+
+            axes[i, j].set_xlim([0, 1.2])
+            axes[i, j].set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1, 1.2])
+            axes[i, j].set_ylim([0, 4.5])
+            axes[i, j].set_yticklabels([])
+            axes[i, j].set_title(
+                f"mean={round(np.mean(x), 2)}, med={round(np.median(x), 2)}, std={round(np.std(x), 2)}",
+                fontsize=10,
+            )
+
+            if i < axes.shape[0] - 1:
+                axes[i, j].set_xticklabels([])
+
+            else:
+                axes[i, j].tick_params(axis="x", labelsize=10)
+                axes[i, j].set_xlabel(sign[j], fontsize=13)
+
+            if j == 0:
+                axes[i, j].set_ylabel(args.methods[i], fontsize=12)
+
+    plt.savefig(os.path.join(args.output, figname + ".png"))
+
+
 ##########
 ## MAIN ##
 ##########
@@ -649,6 +733,8 @@ if __name__ == "__main__":
     hydrograph(args, "val", "hydrograph_val")
 
     compare_cost(args)
+
+    compare_signature_hist(args)
 
     param_map(args)
 
