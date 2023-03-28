@@ -530,7 +530,7 @@ def signatures_val(
     start_time="2016-08-01 00:00",
     end_time="2018-08-01 00:00",
     figname="signatures_val",
-    figsize=(12, 6),
+    figsize=(12, 7),
 ):
     print("</> Plotting relative error of signatures...")
 
@@ -606,6 +606,8 @@ def signatures_val(
 
             # Set y-axis limits
             axes[i, j].set_ylim([0, 1.2])
+
+            axes[i, j].set_yticks([0, 0.2, 0.4, 0.6, 0.8, 1, 1.2])
 
             handles, labels = axes[
                 i, j
