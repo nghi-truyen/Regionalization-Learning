@@ -5,13 +5,15 @@ import os
 import argparse
 from preprocessing import load_data
 
-if smash.__version__ == "0.3.0":
+if smash.__version__ >= "0.3.1":
     print("===================================")
     print(f"smash version: {smash.__version__}")
     print("===================================")
 
 else:
-    raise ValueError("Only support for smash 0.3.0 version")
+    raise ValueError(
+        "This code requires a minimum version of smash 0.3.1 or higher. Please update your smash installation."
+    )
 
 
 DESC_NAME = [
@@ -24,7 +26,7 @@ DESC_NAME = [
     "vhcapa",
 ]
 
-BOUNDS = [(2, 2000), (1, 1000), (-20, 5), (1, 200)]
+BOUNDS = {"cp": [2, 2000], "cft": [1, 1000], "exc": [-20, 5], "lr": [1, 200]}
 
 
 parser = argparse.ArgumentParser()
@@ -123,8 +125,8 @@ elif args.method == "ann":
     net = smash.Net()
 
     nd = model.input_data.descriptor.shape[-1]
-
-    ncv = len(BOUNDS)
+    cv = list(BOUNDS.keys())
+    bounds = list(BOUNDS.values())
 
     net.add(
         layer="dense",
@@ -156,16 +158,16 @@ elif args.method == "ann":
 
     net.add(
         layer="dense",
-        options={"neurons": ncv, "kernel_initializer": "glorot_uniform"},
+        options={"neurons": len(cv), "kernel_initializer": "glorot_uniform"},
     )
     net.add(layer="activation", options={"name": "sigmoid"})
 
     net.add(
         layer="scale",
-        options={"bounds": BOUNDS},
+        options={"bounds": bounds},
     )
 
-    net.compile(optimizer="Adam", learning_rate=0.005)
+    net.compile(optimizer="Adam", options={"learning_rate": 0.005})
 
     print(net)
 
@@ -175,6 +177,7 @@ elif args.method == "ann":
         early_stopping=True,
         gauge=cal_code,
         wgauge="mean",
+        control_vector=cv,
         bounds=BOUNDS,
         inplace=True,
         verbose=True,

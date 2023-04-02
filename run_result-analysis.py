@@ -18,13 +18,15 @@ from preprocessing import load_data
 import smash
 from smash.solver._mwd_cost import nse, kge
 
-if smash.__version__ == "0.3.0":
+if smash.__version__ >= "0.3.1":
     print("===================================")
     print(f"smash version: {smash.__version__}")
     print("===================================")
 
 else:
-    raise ValueError("Only support for smash 0.3.0 version")
+    raise ValueError(
+        "This code requires a minimum version of smash 0.3.1 or higher. Please update your smash installation."
+    )
 
 
 ##################################
