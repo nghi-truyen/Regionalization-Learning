@@ -340,7 +340,9 @@ def param_map(
     plt.savefig(os.path.join(args.output, figname + ".png"))
 
 
-def cost_descent(args, niter=250, figsize=(12, 6), figname="cost_descent"):
+def cost_descent(args, niter=250, figsize=(12, 5.5), figname="cost_descent"):
+    # only available for Med-Est case
+
     print("</> Plotting cost descent...")
 
     x = range(1, niter + 1)
@@ -354,7 +356,7 @@ def cost_descent(args, niter=250, figsize=(12, 6), figname="cost_descent"):
     linestyles = ["-", ":", "-."]
     line_kwargs = {"linewidth": 2}
 
-    fig, ax = plt.subplots(figsize=figsize)
+    fig, axes = plt.subplots(figsize=figsize, nrows=1, ncols=2)
 
     for i, mtd in enumerate(args.filename_method[1:]):
         if mtd == "ann":
@@ -368,7 +370,7 @@ def cost_descent(args, niter=250, figsize=(12, 6), figname="cost_descent"):
                 usecols=(8, 12),
             )
 
-        ax.plot(
+        axes[0].plot(
             x,
             J[: len(x), 0],
             label=args.methods[i + 1],  # without uniform method
@@ -377,18 +379,32 @@ def cost_descent(args, niter=250, figsize=(12, 6), figname="cost_descent"):
             **line_kwargs,
         )
 
-    # Set x and y axis labels, title and legend
-    ax.set_xlabel("Iteration", fontsize=14)
-    ax.set_ylabel("Cost", fontsize=14)
-    # ax.set_title("Multisites Optimization", fontsize=16, fontweight="bold")
-    ax.legend(fontsize=12)
+        if mtd=="ann":
 
-    # Customize tick labels and grid lines
-    ax.tick_params(axis="both", which="major", labelsize=12, width=2, length=6)
-    ax.tick_params(axis="both", which="minor", labelsize=10, width=1, length=4)
-    ax.grid(
-        True, which="major", axis="both", linestyle="--", color="lightgray", alpha=0.7
-    )
+            axes[1].plot(
+                x,
+                J[: len(x), 1],
+                label=args.methods[i + 1],  # without uniform method
+                color=colors[i],
+                linestyle=linestyles[i],
+                **line_kwargs,
+            )
+
+            from matplotlib import ticker
+            formatter = ticker.ScalarFormatter(useMathText=True)
+            formatter.set_scientific(True) 
+            formatter.set_powerlimits((-1,1)) 
+            axes[1].yaxis.set_major_formatter(formatter)
+
+    # Set x and y axis labels, title and legend
+    axes[0].set_xlabel("Iteration", fontsize=14)
+    axes[0].set_ylabel("Cost", fontsize=14)
+
+    axes[1].set_xlabel("Iteration", fontsize=14)
+    axes[1].set_ylabel("Projected cost gradient", fontsize=14)
+
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="upper center", ncol=3, fontsize=12)
 
     plt.savefig(os.path.join(args.output, figname + ".png"))
 
@@ -731,19 +747,19 @@ if __name__ == "__main__":
 
     args = initialize_args()
 
-    # cost_descent(args, niter=262)
+    cost_descent(args, niter=262)  # only available for Med-Est case
 
-    hydrograph(args, "cal", "hydrograph_cal")
-    hydrograph(args, "val", "hydrograph_val")
+    # hydrograph(args, "cal", "hydrograph_cal")
+    # hydrograph(args, "val", "hydrograph_val")
 
-    compare_cost(args)
+    # compare_cost(args)
 
-    compare_signature_hist(args)
+    # compare_signature_hist(args)
 
-    param_map(args)
+    # param_map(args)
 
-    desc_map(args)
+    # desc_map(args)
 
-    linear_cov(args)
+    # linear_cov(args)
 
-    signatures_val(args)
+    # signatures_val(args)
