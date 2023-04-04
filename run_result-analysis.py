@@ -113,7 +113,7 @@ def compare_cost(args, fobj="NSE", figname="compare_cost", figsize=(15, 8)):
                 cal_val.append("Cal")
 
             elif code in args.val_code:
-                cal_val.append("Spatio Val")
+                cal_val.append("Spatial Val")
 
             else:
                 continue
@@ -141,7 +141,7 @@ def compare_cost(args, fobj="NSE", figname="compare_cost", figsize=(15, 8)):
         palette="deep",
         showfliers=True,
         ax=axes[0],
-        order=["Cal", "Spatio Val"],
+        order=["Cal", "Spatial Val"],
     )
 
     # Set title and axis labels
@@ -174,14 +174,14 @@ def compare_cost(args, fobj="NSE", figname="compare_cost", figsize=(15, 8)):
             )
 
     for i, catch in enumerate(code_catch):  # to separate cal and val code
-        if cal_val[i] == "Spatio Val":
+        if cal_val[i] == "Spatial Val":
             axes[1].scatter(
                 catch,
                 cost[i],
                 color=cls[metd[i]],
                 marker="^",
                 s=100,
-                label="Spatio Val" if i == 0 else None,
+                label="Spatial Val" if i == 0 else None,
             )
 
     legend_elements = [
@@ -196,7 +196,7 @@ def compare_cost(args, fobj="NSE", figname="compare_cost", figsize=(15, 8)):
             markeredgewidth=1,
             markersize=8,
         )
-        for m, l in zip(["s", "^"], ["Cal", "Spatio Val"])
+        for m, l in zip(["s", "^"], ["Cal", "Spatial Val"])
     ]
     axes[1].legend(handles=legend_elements, loc="lower left", ncols=2, fontsize=14)
 
@@ -731,19 +731,5 @@ if __name__ == "__main__":
 
     args = initialize_args()
 
-    # cost_descent(args, niter=262)
-
-    hydrograph(args, "cal", "hydrograph_cal")
-    hydrograph(args, "val", "hydrograph_val")
-
     compare_cost(args)
 
-    compare_signature_hist(args)
-
-    param_map(args)
-
-    desc_map(args)
-
-    linear_cov(args)
-
-    signatures_val(args)
