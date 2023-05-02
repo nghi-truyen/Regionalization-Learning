@@ -145,12 +145,15 @@ def radialplot(args, fobj="NSE", figname="radialplots", figsize=(12, 6)):
     ax1.set_xticks(rad)
     ax1.set_xticklabels(np.array(code_cal)[indsort_cal])
 
-    ax1.set_rticks([0.2, 0.4, 0.6, 0.8])  # Less radial ticks
+    ax1.set_rticks([0, 0.2, 0.4, 0.6, 0.8])  # Less radial ticks
     ax1.set_rlabel_position(-25)  # Move radial labels away from plotted line
     ax1.tick_params(axis="both", labelsize=10)  # Custom font size and scale values
     ax1.spines["polar"].set_visible(
         False
     )  # Hide the border of the circle behind the text
+
+    ax1.set_rmin(-0.25)
+    ax1.set_rmax(1)
 
     ax1.set_title("Cal", va="bottom")
 
@@ -158,7 +161,7 @@ def radialplot(args, fobj="NSE", figname="radialplots", figsize=(12, 6)):
     label_position = ax1.get_rlabel_position()
     ax1.text(
         np.radians(label_position - 5),
-        ax1.get_rmax() / 2,
+        (ax1.get_rmax() + ax1.get_rmin()) / 2,
         "NSE",
         rotation=label_position,
         ha="center",
@@ -185,14 +188,15 @@ def radialplot(args, fobj="NSE", figname="radialplots", figsize=(12, 6)):
     ax2.set_xticks(rad)
     ax2.set_xticklabels(np.array(code_sval)[indsort_sval])
 
-    ax2.set_rticks([0.2, 0.4, 0.6, 0.8])  # Less radial ticks
+    ax2.set_rticks([0, 0.2, 0.4, 0.6, 0.8])  # Less radial ticks
     ax2.set_rlabel_position(-30)  # Move radial labels away from plotted line
-    ax2.tick_params(
-        axis="both", labelsize=10, pad=12
-    )  # Custom font size and scale values
+    ax2.tick_params(axis="both", labelsize=10)  # Custom font size and scale values
     ax2.spines["polar"].set_visible(
         False
     )  # Hide the border of the circle behind the text
+
+    ax2.set_rmin(-0.25)
+    ax2.set_rmax(1)
 
     ax2.set_title("Spatial Val", va="bottom")
 
@@ -200,7 +204,7 @@ def radialplot(args, fobj="NSE", figname="radialplots", figsize=(12, 6)):
     label_position = ax2.get_rlabel_position()
     ax2.text(
         np.radians(label_position - 5),
-        ax2.get_rmax() / 2,
+        (ax2.get_rmax() + ax2.get_rmin()) / 2,
         "NSE",
         rotation=label_position,
         ha="center",
@@ -209,14 +213,16 @@ def radialplot(args, fobj="NSE", figname="radialplots", figsize=(12, 6)):
     )
 
     # adjust the subplots layout
-    fig.subplots_adjust(wspace=0.5)
+    fig.subplots_adjust(wspace=0.35)
 
     fig.legend(loc="lower center", ncols=4, fontsize=12)
 
     plt.savefig(os.path.join(args.output, figname + ".png"))
 
 
-def boxplot_and_scatterplot(args, fobj="NSE", figname="box-scatterplots", figsize=(15, 8)):
+def boxplot_and_scatterplot(
+    args, fobj="NSE", figname="box-scatterplots", figsize=(15, 8)
+):
     print("</> Plotting boxplots and scatterplots...")
 
     cost = []
