@@ -95,8 +95,129 @@ def initialize_args():  # do not set new attr or modify any attr of args outside
 ##############################
 
 
-def compare_cost(args, fobj="NSE", figname="compare_cost", figsize=(15, 8)):
-    print("</> Plotting boxplots...")
+def radialplot(args, fobj="NSE", figname="radialplots", figsize=(12, 6)):
+    print("</> Plotting radialplots...")
+
+    cost_cal = {mtd: [] for mtd in args.methods}
+    cost_sval = {mtd: [] for mtd in args.methods}
+    code_cal = []
+    code_sval = []
+
+    for i, code in enumerate(args.models_ddt[0]["code"]):
+        for model, method in zip(args.models_ddt, args.methods):
+            qo = model["qobs"][i]
+            qs = model["qsim"][i]
+
+            if code in args.cal_code:
+                code_cal.append(code) if code not in code_cal else code_cal
+                cost_cal[method].append(1 - args.cost[fobj](qo, qs))
+
+            elif code in args.val_code:
+                code_sval.append(code) if code not in code_sval else code_sval
+                cost_sval[method].append(1 - args.cost[fobj](qo, qs))
+
+    colors = [
+        "#4c72b0",
+        "#dd8452",
+        "#55a868",
+        "#c44e52",
+    ]  # corresponding colors for palette='deep'
+
+    fig, (ax1, ax2) = plt.subplots(
+        nrows=1, ncols=2, figsize=figsize, subplot_kw={"projection": "polar"}
+    )
+
+    ## CAL ##
+
+    indsort_cal = np.argsort(cost_cal["ANN"])
+    rad = np.linspace(0, 2 * np.pi, len(indsort_cal), endpoint=False)
+
+    for mtd, color in zip(args.methods, colors):
+        ax1.plot(
+            rad,
+            np.array(cost_cal[mtd])[indsort_cal],
+            linewidth=2,
+            linestyle="solid",
+            c=color,
+        )
+
+    # set the labels for each point on the plot
+    ax1.set_xticks(rad)
+    ax1.set_xticklabels(np.array(code_cal)[indsort_cal])
+
+    ax1.set_rticks([0.2, 0.4, 0.6, 0.8])  # Less radial ticks
+    ax1.set_rlabel_position(-25)  # Move radial labels away from plotted line
+    ax1.tick_params(axis="both", labelsize=10)  # Custom font size and scale values
+    ax1.spines["polar"].set_visible(
+        False
+    )  # Hide the border of the circle behind the text
+
+    ax1.set_title("Cal", va="bottom")
+
+    # Add radial label
+    label_position = ax1.get_rlabel_position()
+    ax1.text(
+        np.radians(label_position - 5),
+        ax1.get_rmax() / 2,
+        "NSE",
+        rotation=label_position,
+        ha="center",
+        va="center",
+        size=10,
+    )
+
+    ## SPATIAL VAL ##
+
+    indsort_sval = np.argsort(cost_sval["ANN"])
+    rad = np.linspace(0, 2 * np.pi, len(indsort_sval), endpoint=False)
+
+    for mtd, color in zip(args.methods, colors):
+        ax2.plot(
+            rad,
+            np.array(cost_sval[mtd])[indsort_sval],
+            linewidth=2,
+            linestyle="solid",
+            c=color,
+            label=mtd,
+        )
+
+    # set the labels for each point on the plot
+    ax2.set_xticks(rad)
+    ax2.set_xticklabels(np.array(code_sval)[indsort_sval])
+
+    ax2.set_rticks([0.2, 0.4, 0.6, 0.8])  # Less radial ticks
+    ax2.set_rlabel_position(-30)  # Move radial labels away from plotted line
+    ax2.tick_params(
+        axis="both", labelsize=10, pad=12
+    )  # Custom font size and scale values
+    ax2.spines["polar"].set_visible(
+        False
+    )  # Hide the border of the circle behind the text
+
+    ax2.set_title("Spatial Val", va="bottom")
+
+    # Add radial label
+    label_position = ax2.get_rlabel_position()
+    ax2.text(
+        np.radians(label_position - 5),
+        ax2.get_rmax() / 2,
+        "NSE",
+        rotation=label_position,
+        ha="center",
+        va="center",
+        size=10,
+    )
+
+    # adjust the subplots layout
+    fig.subplots_adjust(wspace=0.5)
+
+    fig.legend(loc="lower center", ncols=4, fontsize=12)
+
+    plt.savefig(os.path.join(args.output, figname + ".png"))
+
+
+def boxplot_and_scatterplot(args, fobj="NSE", figname="box-scatterplots", figsize=(15, 8)):
+    print("</> Plotting boxplots and scatterplots...")
 
     cost = []
     metd = []
@@ -733,18 +854,18 @@ if __name__ == "__main__":
 
     # cost_descent(args, niter=262)
 
-    hydrograph(args, "cal", "hydrograph_cal")
-    hydrograph(args, "val", "hydrograph_val")
+    # hydrograph(args, "cal", "hydrograph_cal")
+    # hydrograph(args, "val", "hydrograph_val")
 
-    compare_cost(args)
+    radialplot(args)
+    boxplot_and_scatterplot(args)
 
-    compare_signature_hist(args)
+    # compare_signature_hist(args)
 
-    param_map(args)
+    # param_map(args)
 
-    desc_map(args)
+    # desc_map(args)
 
-    linear_cov(args)
+    # linear_cov(args)
 
-    signatures_val(args)
-
+    # signatures_val(args)
