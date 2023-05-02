@@ -854,18 +854,18 @@ if __name__ == "__main__":
 
     # cost_descent(args, niter=262)
 
-    # hydrograph(args, "cal", "hydrograph_cal")
-    # hydrograph(args, "val", "hydrograph_val")
+    hydrograph(args, "cal", "hydrograph_cal")
+    hydrograph(args, "val", "hydrograph_val")
 
     radialplot(args)
     boxplot_and_scatterplot(args)
 
-    # compare_signature_hist(args)
+    compare_signature_hist(args)
 
-    # param_map(args)
+    param_map(args)
 
-    # desc_map(args)
+    desc_map(args)
 
-    # linear_cov(args)
+    linear_cov(args)
 
-    # signatures_val(args)
+    signatures_val(args)
