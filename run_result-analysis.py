@@ -822,16 +822,20 @@ def compare_signature_hist(
 
             axes[i, j].hist(x, bins=30, color=colors[i], range=[0, 2], density=True)
 
-            density = gaussian_kde(x)
-            x_vals = np.linspace(x.min(), x.max(), 100)
-            axes[i, j].plot(x_vals, density(x_vals), "black", linewidth=0.8)
+            # density = gaussian_kde(x)
+            # x_vals = np.linspace(x.min(), x.max(), 100)
+            # axes[i, j].plot(x_vals, density(x_vals), "black", linewidth=0.8)
 
             axes[i, j].set_xlim([0, 1.2])
             axes[i, j].set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1, 1.2])
             axes[i, j].set_ylim([0, 4.5])
+            axes[i, j].axvline(np.median(x), linewidth=1.5, label="Median", c="black")
+            axes[i, j].axvline(
+                np.mean(x), linewidth=1.5, label="Mean", c="black", linestyle="--"
+            )
             axes[i, j].set_yticklabels([])
             axes[i, j].set_title(
-                f"mean={round(np.mean(x), 2)}, med={round(np.median(x), 2)}, std={round(np.std(x), 2)}",
+                f"med={round(np.median(x), 2)}, mean={round(np.mean(x), 2)}, std={round(np.std(x), 2)}",
                 fontsize=10,
             )
 
@@ -844,6 +848,10 @@ def compare_signature_hist(
 
             if j == 0:
                 axes[i, j].set_ylabel(args.methods[i], fontsize=12)
+
+    # Add a legend to the figure
+    handles, labels = axes[0, 0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="lower center", ncol=2, fontsize=12)
 
     plt.savefig(os.path.join(args.output, figname + ".png"))
 
