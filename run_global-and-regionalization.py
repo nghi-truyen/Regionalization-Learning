@@ -39,7 +39,7 @@ parser.add_argument(
     "--method",
     type=str,
     help="Select optimization method",
-    choices=["uniform", "distributed", "hyper-linear", "hyper-polynomial", "ann"],
+    choices=["uniform", "hyper-linear", "hyper-polynomial", "ann"],
 )
 
 parser.add_argument(
@@ -98,7 +98,7 @@ if args.method == "uniform":
         verbose=True,
     )
 
-elif args.method in ["distributed", "hyper-linear", "hyper-polynomial"]:
+elif args.method in ["hyper-linear", "hyper-polynomial"]:
     model.optimize(
         mapping="uniform",
         algorithm="sbs",

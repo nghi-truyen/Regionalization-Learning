@@ -19,20 +19,30 @@ conda activate smash
 # Usage
 Now, you can use the scripts and analysis tools in this repository to perform regionalization calibration methods and analyze the results.
 
-### Run hyper optimization methods
-To run hyper optimization methods, which include uniform mapping, full distributed mapping, hyper linear/polynomial regionalization mapping, and ANN-based regionalization mapping, use the following command:
+### Run global or regionalization optimization methods (multi-gauge)
+To run a global optimization with spatially uniform control vectors:
 ```bash
-(smash) python3 run_hyper-method.py -d data/Med-Est/ -m uniform -o models/Med-Est/
-(smash) python3 run_hyper-method.py -d data/Med-Est/ -m hyper-linear -o models/Med-Est/
-(smash) python3 run_hyper-method.py -d data/Med-Est/ -m hyper-polynomial -o models/Med-Est/
-(smash) python3 run_hyper-method.py -d data/Med-Est/ -m ann -o models/Med-Est/
+(smash) python3 run_global-and-regionalization.py -d data/Med-Est -m uniform -o models/Med-Est
+```
+
+To run regionalization calibration methods, including multivariate linear/polynomial regression and multilayer perceptron:
+```bash
+(smash) python3 run_global-and-regionalization.py -d data/Med-Est -m hyper-linear -o models/Med-Est
+(smash) python3 run_global-and-regionalization.py -d data/Med-Est -m hyper-polynomial -o models/Med-Est
+(smash) python3 run_global-and-regionalization.py -d data/Med-Est -m ann -o models/Med-Est
+```
+
+### Run local optimization methods (mono-gauge)
+To run local calibration methods with spatially uniform/distributed control vectors:
+```bash
+(smash) python3 run_local-calibration.py -d data/Med-Est -m local-uniform -o models/Med-Est
+(smash) python3 run_local-calibration.py -d data/Med-Est -m local-distributed -o models/Med-Est
 ```
 
 ### Running analysis
 To run analysis, use the following command:
 ```bash
-(smash) python3 run_result-analysis.py -d data/Med-Est/ -m models/Med-Est/ -o graphs/Med-Est/
+(smash) python3 run_result-analysis.py -d data/Med-Est -m models/Med-Est -o graphs/Med-Est
 ```
 
 **_Note:_**  Please ensure that the correct paths and file names are used in the scripts and the commands above.
-
