@@ -431,7 +431,7 @@ def param_map(
     cmaps=["RdBu", "Purples", "YlGnBu", "viridis"],
     bounds=[(-20, 5), (1, 200), (1, 1000), (2, 2000)],
     figname="param_map",
-    figsize=(12, 9),
+    figsize=(10, 9),
 ):
     print("</> Plotting parameters map...")
 
