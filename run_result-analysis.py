@@ -367,7 +367,7 @@ def hydrograph(
     fig, axes = plt.subplots(nrows=nr, ncols=nc, figsize=figsize)
 
     for j, mtd in enumerate(args.methods):
-        axes[0, j].set_title(mtd, fontsize=14)
+        axes[0, j].set_title(mtd, fontsize=12)
 
         ind_code = [
             ind for ind, c in enumerate(args.models_ddt[j]["code"]) if c in codes
@@ -416,9 +416,9 @@ def hydrograph(
     fig.legend(handles, labels, loc="lower center", ncol=2, fontsize=12)
 
     # Add axis name
-    fig.text(0.5, 0.075, "Time step", ha="center", fontsize=14)
+    fig.text(0.5, 0.075, "Time step", ha="center", fontsize=12)
     fig.text(
-        0.075, 0.5, "Discharge (m$^3$/s)", va="center", rotation="vertical", fontsize=14
+        0.075, 0.5, "Discharge (m$^3$/s)", va="center", rotation="vertical", fontsize=12
     )
 
     plt.savefig(os.path.join(args.output, figname + ".png"))
@@ -427,6 +427,7 @@ def hydrograph(
 def param_map(
     args,
     params=["exc", "lr", "cft", "cp"],
+    math_params=[r"$c_{exc}$", r"$l_r$", r"$c_{ft}$", r"$c_p$"],
     cmaps=["RdBu", "Purples", "YlGnBu", "viridis"],
     bounds=[(-20, 5), (1, 200), (1, 1000), (2, 2000)],
     figname="param_map",
@@ -437,7 +438,7 @@ def param_map(
     fig, axes = plt.subplots(nrows=3, ncols=len(params), figsize=figsize)
 
     for j, par in enumerate(params):
-        axes[0, j].set_title(params[j])
+        axes[0, j].set_title(math_params[j])
 
         for i, mod in enumerate(args.models_ddt[1:]):
             axes[i, j].yaxis.grid(False)
@@ -546,7 +547,7 @@ def desc_map(
     fig, axes = plt.subplots(nrows=1, ncols=len(desc), figsize=figsize)
 
     for i, darr in enumerate(descriptor.values()):
-        axes[i].set_title("d" + str(i + 1), fontsize=10)
+        axes[i].set_title(rf"$d_{i + 1}$", fontsize=10)
 
         axes[i].yaxis.grid(False)
         axes[i].xaxis.grid(False)
@@ -573,6 +574,7 @@ def desc_map(
 def linear_cov(
     args,
     params=["exc", "lr", "cft", "cp"],
+    math_params=[r"$c_{exc}$", r"$l_r$", r"$c_{ft}$", r"$c_p$"],
     desc=[
         "pente",
         "ddr",
@@ -620,7 +622,7 @@ def linear_cov(
                 # calculate R-squared
                 cov_mat[i, j] = 1 - (RSS / TSS)
 
-        ytl = ["d" + str(num + 1) for num in range(len(desc)) if k == 0]
+        ytl = [rf"$d_{num + 1}$" for num in range(len(desc)) if k == 0]
 
         axes[k].yaxis.grid(False)
         axes[k].xaxis.grid(False)
@@ -628,7 +630,7 @@ def linear_cov(
         sns.heatmap(
             cov_mat,
             xticklabels=ytl,
-            yticklabels=params,
+            yticklabels=math_params,
             vmin=0,
             vmax=1,
             square=True,
