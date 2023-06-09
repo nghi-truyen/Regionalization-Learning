@@ -427,7 +427,7 @@ def hydrograph(
 def param_map(
     args,
     params=["exc", "lr", "cft", "cp"],
-    math_params=[r"$c_{exc}$", r"$l_r$", r"$c_{ft}$", r"$c_p$"],
+    math_params=[r"$k_{exc}$", r"$l_r$", r"$c_{ft}$", r"$c_p$"],
     cmaps=["RdBu", "Purples", "YlGnBu", "viridis"],
     bounds=[(-20, 5), (1, 200), (1, 1000), (2, 2000)],
     figname="param_map",
@@ -574,7 +574,7 @@ def desc_map(
 def linear_cov(
     args,
     params=["exc", "lr", "cft", "cp"],
-    math_params=[r"$c_{exc}$", r"$l_r$", r"$c_{ft}$", r"$c_p$"],
+    math_params=[r"$k_{exc}$", r"$l_r$", r"$c_{ft}$", r"$c_p$"],
     desc=[
         "pente",
         "ddr",
