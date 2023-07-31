@@ -384,8 +384,8 @@ def hydrograph(
 
             ax = axes[i, j]
 
-            ax.plot(t, qo, color="red", label="Observed")
-            ax.plot(t, qs, color="blue", linestyle="-.", label="Simulated")
+            ax.plot(t, qo, color="red", label="Observed", linewidth=2)
+            ax.plot(t, qs, color="blue", linestyle="-.", label="Simulated", linewidth=1)
 
             ax.tick_params(axis="both", which="both", labelsize=10)
 
