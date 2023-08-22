@@ -1,12 +1,12 @@
 This Git repository is dedicated to performing various **multisite regionalization learning** methods, including the use of linear/polynomial mapping and Artificial Neural Network (ANN). It also includes analysis results, such as signal analysis and model parameters analysis.
 
 To use this Git repository, you need to have the following requirements installed:
-- smash >= 0.3.1 and < 1.0.0
+- smash >= 1.0.0
 - Seaborn
 - Scikit-learn
 
 # Installation
-Assuming that you have already installed [smash](https://github.com/DassHydro-dev/smash) (at least version 0.3.1 and below 1.0.0), please follow these steps to install the required dependencies:
+Assuming that you have already installed [smash](https://github.com/DassHydro-dev/smash) (at least version 1.0.0), please follow these steps to install the required dependencies:
 - Activate `smash` environment using Conda.
 ```bash
 conda activate smash
