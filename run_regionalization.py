@@ -1,19 +1,18 @@
 import smash
-import numpy as np
 import pandas as pd
 import os
 import argparse
 from preprocessing import load_data
 
-if smash.__version__ >= "0.3.1":
-    print("===================================")
-    print(f"smash version: {smash.__version__}")
-    print("===================================")
+# if smash.__version__ >= "1.0":
+#     print("===================================")
+#     print(f"smash version: {smash.__version__}")
+#     print("===================================")
 
-else:
-    raise ValueError(
-        "This code requires a minimum version of smash 0.3.1 or higher. Please update your smash installation."
-    )
+# else:
+#     raise ValueError(
+#         "This code requires a minimum version of smash 1.0 or higher. Please update your smash installation."
+#     )
 
 
 DESC_NAME = [

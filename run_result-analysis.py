@@ -15,17 +15,17 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from preprocessing import load_data
 
 import smash
-from smash.solver._mwd_cost import nse, kge
+from smash.fcore._mwd_metrics import nse, kge
 
-if smash.__version__ >= "0.3.1":
-    print("===================================")
-    print(f"smash version: {smash.__version__}")
-    print("===================================")
+# if smash.__version__ >= "1.0":
+#     print("===================================")
+#     print(f"smash version: {smash.__version__}")
+#     print("===================================")
 
-else:
-    raise ValueError(
-        "This code requires a minimum version of smash 0.3.1 or higher. Please update your smash installation."
-    )
+# else:
+#     raise ValueError(
+#         "This code requires a minimum version of smash 1.0 or higher. Please update your smash installation."
+#     )
 
 
 ##################################
