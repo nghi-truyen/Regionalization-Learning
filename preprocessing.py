@@ -6,7 +6,7 @@ import numpy as np
 
 def load_data(
     catchment: str | pd.DataFrame,
-    structure="gr-b",
+    structure="gr4-lr",
     start_time="2006-08-01 00:00",
     end_time="2020-08-01 00:00",
     q_dir="../DATA/qobs",
@@ -37,10 +37,10 @@ def load_data(
             f"catchment must be str or DataFrame, and not {type(catchment)}"
         )
 
-    flowdir = smash.load_dataset("flwdir")
+    flowdir = smash.factory.load_dataset("flwdir")
 
     if not isinstance(catchment.Code_BV, str):
-        mesh = smash.generate_mesh(
+        mesh = smash.factory.generate_mesh(
             flowdir,
             x=catchment.Xexu.values,
             y=catchment.Yexu.values,
@@ -49,7 +49,7 @@ def load_data(
         )
 
     else:
-        mesh = smash.generate_mesh(
+        mesh = smash.factory.generate_mesh(
             flowdir,
             x=catchment.Xexu,
             y=catchment.Yexu,

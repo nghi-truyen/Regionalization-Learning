@@ -1,12 +1,12 @@
 This Git repository is dedicated to performing various **multisite regionalization learning** methods, including the use of linear/polynomial mapping and Artificial Neural Network (ANN). It also includes analysis results, such as signal analysis and model parameters analysis.
 
 To use this Git repository, you need to have the following requirements installed:
-- smash >= 1.0.0
+- smash >= 1.0
 - Seaborn
 - Scikit-learn
 
 # Installation
-Assuming that you have already installed [smash](https://github.com/DassHydro-dev/smash) (at least version 1.0.0), please follow these steps to install the required dependencies:
+Assuming that you have already installed [smash](https://github.com/DassHydro-dev/smash) (at least version 1.0), please follow these steps to install the required dependencies:
 - Activate `smash` environment using Conda.
 ```bash
 conda activate smash
@@ -23,8 +23,8 @@ Now, you can use the scripts and analysis tools in this repository to perform re
 To run multisite calibration methods, including global optimization method with spatially uniform control vectors (regionalization at level 0), regionalization with multivariate linear/polynomial regression, and regionalization with multilayer perceptron (ANN), use the following commands:
 ```bash
 (smash) python3 run_regionalization.py -d data/MedEst -m uniform -o models/MedEst
-(smash) python3 run_regionalization.py -d data/MedEst -m hyper-linear -o models/MedEst
-(smash) python3 run_regionalization.py -d data/MedEst -m hyper-polynomial -o models/MedEst
+(smash) python3 run_regionalization.py -d data/MedEst -m multi-linear -o models/MedEst
+(smash) python3 run_regionalization.py -d data/MedEst -m multi-polynomial -o models/MedEst
 (smash) python3 run_regionalization.py -d data/MedEst -m ann -o models/MedEst
 ```
 
@@ -47,15 +47,17 @@ You can adjust the command parameters as needed using the available flags, such 
 
 ```bash
 usage: run_regionalization.py [-h] [-d DATA]
-                              [-m {uniform,hyper-linear,hyper-polynomial,ann}]
+                              [-m {uniform,multi-linear,multi-polynomial,ann}]
                               [-o OUTPUT]
 
 options:
   -h, --help            show this help message and exit
   -d DATA, -data DATA, --data DATA
                         Select the data directory
-  -m {uniform,hyper-linear,hyper-polynomial,ann}, -method {uniform,hyper-linear,hyper-polynomial,ann}, --method {uniform,hyper-linear,hyper-polynomial,ann}
-                        Select optimization method
+  -m {uniform,multi-linear,multi-polynomial,ann}, -mapping {uniform,multi-linear,multi-polynomial,ann}, --mapping {uniform,multi-linear,multi-polynomial,ann}
+                        Select mapping for the optimization
+  -n NCPU, -ncpu NCPU, --ncpu NCPU
+                        Select the number of CPU if using multiprocessing 
   -o OUTPUT, -output OUTPUT, --output OUTPUT
                         [optional] Set the output directory / Default: current
                         directory

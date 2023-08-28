@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import h5py
 from sklearn.linear_model import LinearRegression
-from scipy.stats import gaussian_kde
 
 import matplotlib.pyplot as plt
 
@@ -75,8 +74,8 @@ def initialize_args():  # do not set new attr or modify any attr of args outside
     ]
     args.filename_method = [
         "uniform",
-        "hyper-linear",
-        "hyper-polynomial",
+        "multi-linear",
+        "multi-polynomial",
         "ann",
     ]
 
@@ -823,10 +822,6 @@ def compare_signature_hist(
             x = x[np.isfinite(x)]
 
             axes[i, j].hist(x, bins=30, color=colors[i], range=[0, 2], density=True)
-
-            # density = gaussian_kde(x)
-            # x_vals = np.linspace(x.min(), x.max(), 100)
-            # axes[i, j].plot(x_vals, density(x_vals), "black", linewidth=0.8)
 
             axes[i, j].set_xlim([0, 1.2])
             axes[i, j].set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1, 1.2])
