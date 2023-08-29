@@ -110,16 +110,8 @@ if args.mapping == "uniform":
     }
 
 elif args.mapping in ["multi-linear", "multi-polynomial"]:
-    ## Define optimize options
-    optimizer = "lbfgsb"
-    optimize_options = {
-        "parameters": list(BOUNDS.keys()),
-        "bounds": BOUNDS,
-        "termination_crit": dict(maxiter=300),
-    }
-
     ## First guess
-    optimize_options_fg = optimize_options = {
+    optimize_options_fg = {
         "parameters": list(BOUNDS.keys()),
         "bounds": BOUNDS,
         "termination_crit": dict(maxiter=6),
@@ -132,8 +124,16 @@ elif args.mapping in ["multi-linear", "multi-polynomial"]:
         common_options=common_options,
     )
 
+    ## Define optimize options
+    optimizer = "lbfgsb"
+    optimize_options = {
+        "parameters": list(BOUNDS.keys()),
+        "bounds": BOUNDS,
+        "termination_crit": dict(maxiter=300),
+    }
+
 elif args.mapping == "ann":
-    ## Custome Net
+    ## Custom Net
     net = smash.factory.Net()
 
     nd = model.setup.nd
