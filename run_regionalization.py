@@ -114,7 +114,7 @@ elif args.mapping in ["multi-linear", "multi-polynomial"]:
     optimize_options_fg = {
         "parameters": list(BOUNDS.keys()),
         "bounds": BOUNDS,
-        "termination_crit": dict(maxiter=6),
+        "termination_crit": dict(maxiter=4),
     }
     model.optimize(
         mapping="uniform",
@@ -129,7 +129,7 @@ elif args.mapping in ["multi-linear", "multi-polynomial"]:
     optimize_options = {
         "parameters": list(BOUNDS.keys()),
         "bounds": BOUNDS,
-        "termination_crit": dict(maxiter=300),
+        "termination_crit": dict(maxiter=200),
     }
 
 elif args.mapping == "ann":
@@ -185,8 +185,8 @@ elif args.mapping == "ann":
         "parameters": list(BOUNDS.keys()),
         "bounds": BOUNDS,
         "net": net,
-        "learning_rate": 0.005,
-        "termination_crit": dict(epochs=500),
+        "learning_rate": 0.004,
+        "termination_crit": dict(epochs=350),
     }
 
 model.optimize(
@@ -197,8 +197,7 @@ model.optimize(
     common_options=common_options,
 )
 
-# smash.save_model_ddt(
-#     model,
-#     path=os.path.join(args.output, args.mapping + ".hdf5"),
-#     sub_data={"cal_cost": model.output.cost},
-# )
+smash.save_model(
+     model,
+     path=os.path.join(args.output, args.mapping + ".hdf5"),
+)
