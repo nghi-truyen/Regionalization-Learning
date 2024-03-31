@@ -6,18 +6,15 @@ from tqdm import tqdm
 import multiprocessing as mp
 from preprocessing import load_data
 
-if smash.__version__ >= "0.3.1":
+if smash.__version__ >= "1.0":
     print("===================================")
     print(f"smash version: {smash.__version__}")
     print("===================================")
 
 else:
     raise ValueError(
-        "This code requires a minimum version of smash 0.3.1 or higher. Please update your smash installation."
+        "This code requires a minimum version of smash 1.0 or higher. Please update your smash installation."
     )
-
-
-BOUNDS = {"cp": [2, 2000], "cft": [1, 1000], "exc": [-20, 5], "lr": [1, 200]}
 
 
 parser = argparse.ArgumentParser()
@@ -26,11 +23,11 @@ parser.add_argument("-d", "-data", "--data", type=str, help="Select the data dir
 
 parser.add_argument(
     "-m",
-    "-method",
-    "--method",
+    "-mapping",
+    "--mapping",
     type=str,
-    help="Select optimization method",
-    choices=["local-uniform", "local-distributed"],
+    help="Select optimization mapping",
+    choices=["uniform", "distributed"],
 )
 
 parser.add_argument(
@@ -53,11 +50,11 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-if not os.path.exists(os.path.join(args.output, args.method)):
-    os.makedirs(os.path.join(args.output, args.method))
+if not os.path.exists(os.path.join(args.output, "local-" + args.mapping)):
+    os.makedirs(os.path.join(args.output, "local-" + args.mapping))
 
 
-def local_optimize(df, start_time, end_time):
+def local_optimize(df, start_time, end_time, warmup):
     setup, mesh = load_data(
         df,
         start_time=start_time,
@@ -65,41 +62,46 @@ def local_optimize(df, start_time, end_time):
         desc_dir="...",
     )
 
+    common_options = {"verbose": True}
+    cost_options = {"end_warmup": warmup}
+
     model = smash.Model(setup, mesh)
 
-    if args.method == "local-uniform":
+    if args.mapping == "uniform":
+        # Define optimize options
+        optimizer = "sbs"
+        optimize_options = {"termination_crit": dict(maxiter=50)}
+
+    elif args.mapping == "distributed":
+        # First guess
+        optimize_options_fg = {"termination_crit": dict(maxiter=2)}
         model.optimize(
             mapping="uniform",
-            algorithm="sbs",
-            bounds=BOUNDS,
-            options={"maxiter": 100},
-            inplace=True,
-            verbose=True,
+            optimizer="sbs",
+            optimize_options=optimize_options_fg,
+            cost_options=cost_options,
+            common_options=common_options,
         )
 
-    elif args.method == "local-distributed":
-        model.optimize(
-            mapping="uniform",
-            algorithm="sbs",
-            bounds=BOUNDS,
-            options={"maxiter": 6},
-            inplace=True,
-            verbose=True,
-        )
+        ## Define optimize options
+        optimizer = "lbfgsb"
+        optimize_options = {"termination_crit": dict(maxiter=200)}
 
-        model.optimize(
-            mapping="distributed",
-            algorithm="l-bfgs-b",
-            bounds=BOUNDS,
-            options={"maxiter": 300},
-            inplace=True,
-            verbose=True,
-        )
+    # Model optimization
+    model.optimize(
+        mapping=args.mapping,
+        optimizer=optimizer,
+        optimize_options=optimize_options,
+        cost_options=cost_options,
+        common_options=common_options,
+    )
 
-    smash.save_model_ddt(
+    # Save optimized model
+    smash.io.save_model(
         model,
-        path=os.path.join(args.output, args.method, model.mesh.code[0] + ".hdf5"),
-        sub_data={"cal_cost": model.output.cost},
+        path=os.path.join(
+            args.output, "local-" + args.mapping + f"/{model.mesh.code[0]}.hdf5"
+        ),
     )
 
 
@@ -107,11 +109,11 @@ def local_optimize(df, start_time, end_time):
 ## MAIN ##
 ##########
 
+START = "2016-08-01"
+END_WARMUP = "2017-07-31"
+END = "2020-07-31"
 
-df = pd.read_csv(os.path.join(args.data, "info_bv.csv"))
-
-start_time = "2006-08-01 00:00"
-end_time = "2016-08-01 00:00"
+df = pd.read_csv(os.path.join(args.data, "cacthment_info.csv"))
 
 if args.ncpu > 1:
     pool = mp.Pool(args.ncpu)
@@ -119,7 +121,7 @@ if args.ncpu > 1:
     pool.starmap(
         local_optimize,
         [
-            (dfi, start_time, end_time)
+            (dfi, START, END, END_WARMUP)
             for dfi in tqdm(df.iloc, desc="</> Local calibration")
         ],
     )
@@ -128,4 +130,4 @@ if args.ncpu > 1:
 
 else:
     for dfi in tqdm(df.iloc, desc="</> Local calibration"):
-        local_optimize(dfi, start_time, end_time)
+        local_optimize(dfi, START, END, END_WARMUP)

@@ -22,21 +22,21 @@ Now, you can use the scripts and analysis tools in this repository to perform re
 
 To run multisite calibration methods, including global optimization method with spatially uniform control vectors (regionalization at level 0), regionalization with multivariate linear/polynomial regression, and regionalization with multilayer perceptron (ANN), use the following commands:
 ```bash
-(smash) python3 run_regionalization.py -d data/MedEst -m uniform -o models/MedEst
-(smash) python3 run_regionalization.py -d data/MedEst -m multi-linear -o models/MedEst
-(smash) python3 run_regionalization.py -d data/MedEst -m multi-polynomial -o models/MedEst
-(smash) python3 run_regionalization.py -d data/MedEst -m ann -o models/MedEst
+(smash) python3 run_regionalization.py -d data -m uniform -o models
+(smash) python3 run_regionalization.py -d data -m multi-linear -o models
+(smash) python3 run_regionalization.py -d data -m multi-polynomial -o models
+(smash) python3 run_regionalization.py -d data -m ann -o models
 ```
 
 **_Note:_** If you want to run local optimization methods (mono-gauge), which include local calibration methods with spatially uniform and distributed control vectors, use the following commands:
 ```bash
-(smash) python3 run_local-calibration.py -d data/MedEst -m local-uniform -o models/MedEst
-(smash) python3 run_local-calibration.py -d data/MedEst -m local-distributed -o models/MedEst
+(smash) python3 run_local-calibration.py -d data -m local-uniform -o models
+(smash) python3 run_local-calibration.py -d data -m local-distributed -o models
 ```
 
 To run analysis on the results, use the following command:
 ```bash
-(smash) python3 run_result-analysis.py -d data/MedEst -m models/MedEst -o graphs/MedEst
+(smash) python3 run_result-analysis.py -d data -m models -o graphs
 ```
 
 **_Note:_** Please make sure to provide the correct paths and file names in the scripts and the commands mentioned above. 

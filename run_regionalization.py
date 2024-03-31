@@ -1,18 +1,20 @@
 import smash
 import pandas as pd
 import os
+import time
+import pickle
 import argparse
 from preprocessing import load_data
 
-# if smash.__version__ >= "1.0":
-#     print("===================================")
-#     print(f"smash version: {smash.__version__}")
-#     print("===================================")
+if smash.__version__ >= "1.0":
+    print("===================================")
+    print(f"smash version: {smash.__version__}")
+    print("===================================")
 
-# else:
-#     raise ValueError(
-#         "This code requires a minimum version of smash 1.0 or higher. Please update your smash installation."
-#     )
+else:
+    raise ValueError(
+        "This code requires a minimum version of smash 1.0 or higher. Please update your smash installation."
+    )
 
 
 DESC_NAME = [
@@ -24,8 +26,9 @@ DESC_NAME = [
     "resutilpot",
     "vhcapa",
 ]
-
-BOUNDS = {"cp": [2, 2000], "ct": [1, 1000], "kexc": [-20, 5], "llr": [1, 200]}
+START = "2016-08-01"
+END_WARMUP = "2017-07-31"
+END = "2020-07-31"
 
 
 parser = argparse.ArgumentParser()
@@ -70,17 +73,16 @@ print("  GENERATE MESH AND SETUP  ")
 print("===========================")
 
 setup, mesh = load_data(
-    os.path.join(args.data, "info_bv.csv"),
-    structure="gr4-lr",
-    start_time="2006-08-01 00:00",
-    end_time="2016-08-01 00:00",
+    os.path.join(args.data, "catchment_info.csv"),
+    start_time=START,
+    end_time=END,
     desc_name=DESC_NAME,
 )
 
 print(f"Studied period: {setup['start_time']} - {setup['end_time']}")
 print(f"Studied descriptors: {setup['descriptor_name']}")
 
-cal_code = pd.read_csv(os.path.join(args.data, "cal_code.csv"))["cal"].to_list()
+cal_code = pd.read_csv(os.path.join(args.data, "cal.csv"))["code"].to_list()
 
 # %%% Create Model object %%%
 print("=====================")
@@ -88,7 +90,6 @@ print("     MODEL OBJECT    ")
 print("=====================")
 
 model = smash.Model(setup, mesh)
-print(model)
 
 
 # %%% Optimize Model %%%
@@ -97,25 +98,22 @@ print("   MODEL OPTIMIZE    ")
 print("=====================")
 
 common_options = {"ncpu": args.ncpu, "verbose": True}
-
-cost_options = {"gauge": cal_code, "wgauge": "mean"}
+cost_options = {"gauge": cal_code, "wgauge": "mean", "end_warmup": END_WARMUP}
+return_options = {
+    "iter_cost": True,
+    "iter_projg": True,
+    "control_vector": True,
+    "net": True,
+}
 
 if args.mapping == "uniform":
-    ## Define optimize options
+    # Define optimize options
     optimizer = "sbs"
-    optimize_options = {
-        "parameters": list(BOUNDS.keys()),
-        "bounds": BOUNDS,
-        "termination_crit": dict(maxiter=100),
-    }
+    optimize_options = {"termination_crit": dict(maxiter=100)}
 
 elif args.mapping in ["multi-linear", "multi-polynomial"]:
-    ## First guess
-    optimize_options_fg = {
-        "parameters": list(BOUNDS.keys()),
-        "bounds": BOUNDS,
-        "termination_crit": dict(maxiter=4),
-    }
+    # First guess
+    optimize_options_fg = {"termination_crit": dict(maxiter=2)}
     model.optimize(
         mapping="uniform",
         optimizer="sbs",
@@ -124,21 +122,19 @@ elif args.mapping in ["multi-linear", "multi-polynomial"]:
         common_options=common_options,
     )
 
-    ## Define optimize options
+    # Define optimize options
     optimizer = "lbfgsb"
-    optimize_options = {
-        "parameters": list(BOUNDS.keys()),
-        "bounds": BOUNDS,
-        "termination_crit": dict(maxiter=200),
-    }
+    optimize_options = {"termination_crit": dict(maxiter=250)}
 
 elif args.mapping == "ann":
-    ## Custom Net
+    # Custom Net
     net = smash.factory.Net()
 
+    dopt = smash.default_optimize_options(model)
+
     nd = model.setup.nd
-    cv = list(BOUNDS.keys())
-    bounds = list(BOUNDS.values())
+    cv = dopt["parameters"]
+    bounds = list(dopt["bounds"].values())
 
     net.add(
         layer="dense",
@@ -182,22 +178,34 @@ elif args.mapping == "ann":
     ## Define optimize options
     optimizer = "adam"
     optimize_options = {
-        "parameters": list(BOUNDS.keys()),
-        "bounds": BOUNDS,
         "net": net,
-        "learning_rate": 0.004,
-        "termination_crit": dict(epochs=350),
+        "learning_rate": 0.003,
+        "termination_crit": dict(epochs=350, early_stopping=80),
     }
 
-model.optimize(
+start_time = time.time()
+
+ret = model.optimize(
     mapping=args.mapping,
     optimizer=optimizer,
     optimize_options=optimize_options,
     cost_options=cost_options,
     common_options=common_options,
+    return_options=return_options,
 )
 
-smash.save_model(
-     model,
-     path=os.path.join(args.output, args.mapping + ".hdf5"),
+end_time = time.time()
+
+print("======================")
+print(f"</> Calibration time: {(end_time - start_time) / 3600} hours")
+print("======================")
+
+# Save optimized model
+smash.io.save_model(
+    model,
+    path=os.path.join(args.output, args.mapping + ".hdf5"),
 )
+
+# Save supplementary object
+with open(os.path.join(args.output, args.mapping + "_ret.pickle"), "wb") as f:
+    pickle.dump(ret, f)

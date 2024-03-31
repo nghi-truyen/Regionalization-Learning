@@ -6,9 +6,8 @@ import numpy as np
 
 def load_data(
     catchment: str | pd.DataFrame,
-    structure="gr4-lr",
-    start_time="2006-08-01 00:00",
-    end_time="2020-08-01 00:00",
+    start_time: str | pd.Series,
+    end_time: str | pd.Series,
     q_dir="../DATA/qobs",
     prcp_dir="../DATA/prcp",
     pet_dir="../DATA/pet",
@@ -39,26 +38,25 @@ def load_data(
 
     flowdir = smash.factory.load_dataset("flwdir")
 
-    if not isinstance(catchment.Code_BV, str):
+    if not isinstance(catchment.code, str):
         mesh = smash.factory.generate_mesh(
             flowdir,
-            x=catchment.Xexu.values,
-            y=catchment.Yexu.values,
-            area=catchment.Surf_Bnbv.values * 10**6,
-            code=catchment.Code_BV.values,
+            x=catchment.x.values,
+            y=catchment.y.values,
+            area=catchment.area.values * 10**6,
+            code=catchment.code.values,
         )
 
     else:
         mesh = smash.factory.generate_mesh(
             flowdir,
-            x=catchment.Xexu,
-            y=catchment.Yexu,
-            area=catchment.Surf_Bnbv * 10**6,
-            code=catchment.Code_BV,
+            x=catchment.x,
+            y=catchment.y,
+            area=catchment.area * 10**6,
+            code=catchment.code,
         )
 
     setup = {
-        "structure": structure,
         "dt": 3600,
         "start_time": start_time,
         "end_time": end_time,
@@ -114,7 +112,7 @@ def preprocess_visualize(setup, mesh, descriptor_plot=True):
         model = smash.Model(setup_copy, mesh)
 
         for i, d in enumerate(setup_copy["descriptor_name"]):
-            des = model.input_data.descriptor[..., i]
+            des = model.physio_data.descriptor[..., i]
 
             plt.imshow(des)
 
