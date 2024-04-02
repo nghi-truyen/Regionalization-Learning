@@ -106,6 +106,8 @@ return_options = {
     "net": True,
 }
 
+ts_sim = time.time()
+
 if args.mapping == "uniform":
     # Define optimize options
     optimizer = "sbs"
@@ -113,7 +115,7 @@ if args.mapping == "uniform":
 
 elif args.mapping in ["multi-linear", "multi-polynomial"]:
     # First guess
-    optimize_options_fg = {"termination_crit": dict(maxiter=2)}
+    optimize_options_fg = {"termination_crit": dict(maxiter=5)}
     model.optimize(
         mapping="uniform",
         optimizer="sbs",
@@ -183,8 +185,6 @@ elif args.mapping == "ann":
         "termination_crit": dict(epochs=350, early_stopping=80),
     }
 
-start_time = time.time()
-
 ret = model.optimize(
     mapping=args.mapping,
     optimizer=optimizer,
@@ -194,10 +194,10 @@ ret = model.optimize(
     return_options=return_options,
 )
 
-end_time = time.time()
+te_sim = time.time()
 
 print("======================")
-print(f"</> Calibration time: {(end_time - start_time) / 3600} hours")
+print(f"</> Calibration time: {(te_sim - ts_sim) / 3600} hours")
 print("======================")
 
 # Save optimized model
