@@ -33,7 +33,7 @@ END = "2020-07-31"
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("-d", "-data", "--data", type=str, help="Select the data directory")
+parser.add_argument("-f", "-file", "--file", type=str, help="Select catchment information file")
 
 parser.add_argument(
     "-m",
@@ -42,6 +42,15 @@ parser.add_argument(
     type=str,
     help="Select mapping for the optimization",
     choices=["uniform", "multi-linear", "multi-polynomial", "ann"],
+)
+
+parser.add_argument(
+    "-g",
+    "-gauge",
+    "--gauge",
+    type=str,
+    help="Select gauge type for the optimization",
+    choices=["upstream", "downstream", "intermediate", "independent"],
 )
 
 parser.add_argument(
@@ -73,7 +82,7 @@ print("  GENERATE MESH AND SETUP  ")
 print("===========================")
 
 setup, mesh = load_data(
-    os.path.join(args.data, "catchment_info.csv"),
+    args.file,
     start_time=START,
     end_time=END,
     desc_name=DESC_NAME,
@@ -82,7 +91,8 @@ setup, mesh = load_data(
 print(f"Studied period: {setup['start_time']} - {setup['end_time']}")
 print(f"Studied descriptors: {setup['descriptor_name']}")
 
-cal_code = pd.read_csv(os.path.join(args.data, "cal.csv"))["code"].to_list()
+catch_info = pd.read_csv(args.file)
+cal_code = catch_info[catch_info["nature"]==args.gauge]["code"].to_list()
 
 # %%% Create Model object %%%
 print("=====================")

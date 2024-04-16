@@ -19,7 +19,7 @@ else:
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("-d", "-data", "--data", type=str, help="Select the data directory")
+parser.add_argument("-f", "-file", "--file", type=str, help="Select catchment information file")
 
 parser.add_argument(
     "-m",
@@ -113,7 +113,7 @@ START = "2016-08-01"
 END_WARMUP = "2017-07-31"
 END = "2020-07-31"
 
-df = pd.read_csv(os.path.join(args.data, "cacthment_info.csv"))
+df = pd.read_csv(args.file)
 
 if args.ncpu > 1:
     pool = mp.Pool(args.ncpu)

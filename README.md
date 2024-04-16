@@ -20,23 +20,23 @@ conda activate smash
 # Usage
 Now, you can use the scripts and analysis tools in this repository to perform regionalization calibration methods and analyze the results.
 
-To run multisite calibration methods, including global optimization method with spatially uniform control vectors (regionalization at level 0), regionalization with multivariate linear/polynomial regression, and regionalization with multilayer perceptron (ANN), use the following commands:
+To perform multisite (using gauges located upstream in this case) calibration methods, including global optimization method with spatially uniform control vectors (regionalization at level 0), regionalization with multivariate linear/polynomial regression, and regionalization with multilayer perceptron (ANN), use the following commands:
 ```bash
-(smash) python3 run_regionalization.py -d data -m uniform -o models
-(smash) python3 run_regionalization.py -d data -m multi-linear -o models
-(smash) python3 run_regionalization.py -d data -m multi-polynomial -o models
-(smash) python3 run_regionalization.py -d data -m ann -o models
+(smash) python3 run_regionalization.py -f catchment_info.csv -g upstream -m uniform -o models
+(smash) python3 run_regionalization.py -f catchment_info.csv -g upstream -m multi-linear -o models
+(smash) python3 run_regionalization.py -f catchment_info.csv -g upstream -m multi-polynomial -o models
+(smash) python3 run_regionalization.py -f catchment_info.csv -g upstream -m ann -o models
 ```
 
 **_Note:_** If you want to run local optimization methods (mono-gauge), which include local calibration methods with spatially uniform and distributed control vectors, use the following commands:
 ```bash
-(smash) python3 run_local-calibration.py -d data -m local-uniform -o models
-(smash) python3 run_local-calibration.py -d data -m local-distributed -o models
+(smash) python3 run_local-calibration.py -f catchment_info.csv -m local-uniform -o models
+(smash) python3 run_local-calibration.py -f catchment_info.csv -m local-distributed -o models
 ```
 
 To run analysis on the results, use the following command:
 ```bash
-(smash) python3 run_result-analysis.py -d data -m models -o graphs
+(smash) python3 run_result-analysis.py ...
 ```
 
 **_Note:_** Please make sure to provide the correct paths and file names in the scripts and the commands mentioned above. 
@@ -45,52 +45,4 @@ To run analysis on the results, use the following command:
 
 You can adjust the command parameters as needed using the available flags, such as `-d`, `-m`, etc.. Here are the usage information and descriptions of all the available flags for each script:
 
-```bash
-usage: run_regionalization.py [-h] [-d DATA]
-                              [-m {uniform,multi-linear,multi-polynomial,ann}]
-                              [-o OUTPUT]
-
-options:
-  -h, --help            show this help message and exit
-  -d DATA, -data DATA, --data DATA
-                        Select the data directory
-  -m {uniform,multi-linear,multi-polynomial,ann}, -mapping {uniform,multi-linear,multi-polynomial,ann}, --mapping {uniform,multi-linear,multi-polynomial,ann}
-                        Select mapping for the optimization
-  -n NCPU, -ncpu NCPU, --ncpu NCPU
-                        Select the number of CPU if using multiprocessing 
-  -o OUTPUT, -output OUTPUT, --output OUTPUT
-                        [optional] Set the output directory / Default: current
-                        directory
-```
-
-```bash
-usage: run_local-calibration.py [-h] [-d DATA]
-                                [-m {local-uniform,local-distributed}]
-                                [-n NCPU] [-o OUTPUT]
-
-options:
-  -h, --help            show this help message and exit
-  -d DATA, -data DATA, --data DATA
-                        Select the data directory
-  -m {local-uniform,local-distributed}, -method {local-uniform,local-distributed}, --method {local-uniform,local-distributed}
-                        Select optimization method
-  -n NCPU, -ncpu NCPU, --ncpu NCPU
-                        Select the number of CPU if using multiprocessing
-  -o OUTPUT, -output OUTPUT, --output OUTPUT
-                        [optional] Set the output directory / Default: current
-                        directory
-```
-
-```bash
-usage: run_result-analysis.py [-h] [-d DATA] [-m MODELDIR] [-o OUTPUT]
-
-options:
-  -h, --help            show this help message and exit
-  -d DATA, -data DATA, --data DATA
-                        Select the data directory
-  -m MODELDIR, -modeldir MODELDIR, --modeldir MODELDIR
-                        Select the model directory
-  -o OUTPUT, -output OUTPUT, --output OUTPUT
-                        [optional] Set the output directory / Default: current
-                        directory
-```
+TODO...
