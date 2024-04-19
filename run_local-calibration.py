@@ -19,7 +19,9 @@ else:
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("-f", "-file", "--file", type=str, help="Select catchment information file")
+parser.add_argument(
+    "-f", "-file", "--file", type=str, help="Select catchment information file"
+)
 
 parser.add_argument(
     "-m",

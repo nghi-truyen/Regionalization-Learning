@@ -33,7 +33,9 @@ END = "2020-07-31"
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("-f", "-file", "--file", type=str, help="Select catchment information file")
+parser.add_argument(
+    "-f", "-file", "--file", type=str, help="Select catchment information file"
+)
 
 parser.add_argument(
     "-m",
@@ -92,7 +94,7 @@ print(f"Studied period: {setup['start_time']} - {setup['end_time']}")
 print(f"Studied descriptors: {setup['descriptor_name']}")
 
 catch_info = pd.read_csv(args.file)
-cal_code = catch_info[catch_info["nature"]==args.gauge]["code"].to_list()
+cal_code = catch_info[catch_info["nature"] == args.gauge]["code"].to_list()
 
 # %%% Create Model object %%%
 print("=====================")
