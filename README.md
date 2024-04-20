@@ -34,7 +34,7 @@ To perform multisite (using gauges located upstream in this case) calibration me
 (smash) python3 run_local-calibration.py -f catchment_info.csv -m Distributed -o models/local
 ```
 
-To run analysis on the results, you may need additional files extracting from the model hdf5 file. 
+To run analysis on the results, you will need additional files extracted from the model hdf5 file. 
 You may refer to the notebook file for more details. Then, use the following command:
 ```bash
 (smash) python3 run_result-analysis.py -m models/reg-upstream -g upstream -o figs
