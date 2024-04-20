@@ -29,7 +29,7 @@ parser.add_argument(
     "--mapping",
     type=str,
     help="Select optimization mapping",
-    choices=["uniform", "distributed"],
+    choices=["Uniform", "Distributed"],
 )
 
 parser.add_argument(
@@ -101,9 +101,7 @@ def local_optimize(df, start_time, end_time, warmup):
     # Save optimized model
     smash.io.save_model(
         model,
-        path=os.path.join(
-            args.output, "local-" + args.mapping + f"/{model.mesh.code[0]}.hdf5"
-        ),
+        path=os.path.join(args.output, f"{args.mapping}/{model.mesh.code[0]}.hdf5"),
     )
 
 

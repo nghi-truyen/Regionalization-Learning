@@ -427,7 +427,7 @@ def desc_map(
 ):
     print("</> Plotting descriptors map...")
 
-    with open("descriptors.pickle", "rb") as f:
+    with open("data/descriptors.pickle", "rb") as f:
         descriptor = pickle.load(f)
 
     fig, axes = plt.subplots(nrows=1, ncols=len(descriptor.keys()), figsize=figsize)
@@ -466,7 +466,7 @@ def linear_cov(
 ):
     print("</> Plotting linear covariance matrix...")
 
-    with open("descriptors.pickle", "rb") as f:
+    with open("data/descriptors.pickle", "rb") as f:
         descriptor = pickle.load(f)
 
     fig, axes = plt.subplots(
@@ -685,7 +685,7 @@ def boxplot_signatures(
     plt.savefig(os.path.join(args.output, figname + ".png"))
 
 
-def cost_gradient(args, maxiter=350, figsize=(15, 9), figname="projected_gradient"):
+def cost_gradient(args, maxiter=360, figsize=(15, 9), figname="projected_gradient"):
     print("</> Plotting cost and projected gradient...")
 
     # Define colors and line styles for each method
@@ -765,7 +765,7 @@ if __name__ == "__main__":
     #     args, bounds=[(0, 800), (0, 150), (-10, 2.5), (0, 100)]
     # )  # for downstream setup
 
-    desc_map()
+    # desc_map()
 
     linear_cov(args)
 

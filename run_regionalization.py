@@ -43,7 +43,7 @@ parser.add_argument(
     "--mapping",
     type=str,
     help="Select mapping for the optimization",
-    choices=["uniform", "multi-linear", "multi-polynomial", "ann"],
+    choices=["Uniform", "Multi-linear", "Multi-polynomial", "ANN"],
 )
 
 parser.add_argument(
