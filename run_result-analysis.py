@@ -1,6 +1,5 @@
 import os
 import argparse
-from tqdm import tqdm
 import pickle
 import random
 
@@ -12,8 +11,6 @@ from sklearn.linear_model import LinearRegression
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 import smash
 
@@ -194,9 +191,7 @@ def boxplot_scores(args, fobj="NSE", figname="scores", figsize=(15, 8)):
         fontsize=14,
     )
 
-    # plt.savefig(os.path.join(args.output, figname + ".png"))
-
-    plt.show()
+    plt.savefig(os.path.join(args.output, figname + ".png"))
 
 
 def boxplot_scores_by_nature(
@@ -277,7 +272,7 @@ def boxplot_scores_by_nature(
         fontsize=14,
     )
 
-    plt.show()
+    plt.savefig(os.path.join(args.output, figname + ".png"))
 
 
 def hydrograph(
@@ -362,186 +357,185 @@ def hydrograph(
     handles, labels = axes[0, 0].get_legend_handles_labels()
     fig.legend(handles, labels, loc="upper center", ncol=2, fontsize=12)
 
-    # plt.savefig(os.path.join(args.output, figname + ".png"))
-    plt.show()
+    plt.savefig(os.path.join(args.output, figname + ".png"))
 
 
-# def param_map(
-#     args,
-#     params=["exc", "lr", "cft", "cp"],
-#     math_params=[r"$k_{exc}$", r"$l_r$", r"$c_{ft}$", r"$c_p$"],
-#     cmaps=["RdBu", "Purples", "YlGnBu", "viridis"],
-#     bounds=[(-20, 5), (1, 200), (1, 1000), (2, 2000)],
-#     figname="param_map",
-#     figsize=(10, 9),
-# ):
-#     print("</> Plotting parameters map...")
+def param_map(
+    args,
+    params=["cp", "ct", "kexc", "llr"],
+    math_params=[r"$c_p$", r"$c_t$", r"$k_{exc}$", r"$l_{l_r}$"],
+    cmaps=["viridis", "YlGnBu", "RdBu", "Purples"],
+    bounds=[(0, 1000), (0, 1000), (-50, 50), (0, 1000)],
+    figname="param_map",
+    figsize=(10, 7),
+):
+    print("</> Plotting parameters map...")
 
-#     fig, axes = plt.subplots(nrows=3, ncols=len(params), figsize=figsize)
+    fig, axes = plt.subplots(nrows=2, ncols=len(params), figsize=figsize)
 
-#     for j, par in enumerate(params):
-#         axes[0, j].set_title(math_params[j])
+    for i, method in enumerate(args.methods[1:]):
+        with open(
+            os.path.join(args.modeldir, f"p1/{method}_parameters.pickle"), "rb"
+        ) as f:
+            parameters = pickle.load(f)
 
-#         for i, mod in enumerate(args.models_ddt[1:]):
-#             axes[i, j].yaxis.grid(False)
-#             axes[i, j].xaxis.grid(False)
+        for j, par in enumerate(params):
+            if i == 0:
+                axes[0, j].set_title(math_params[j], fontsize=14)
 
-#             axes[i, j].set_xticks([])
-#             axes[i, j].set_yticks([])
+            axes[i, j].yaxis.grid(False)
+            axes[i, j].xaxis.grid(False)
 
-#             im = axes[i, j].imshow(
-#                 mod[par],
-#                 cmap=cmaps[j],
-#                 vmin=bounds[j][0],
-#                 vmax=bounds[j][1],
-#                 interpolation="bicubic",
-#                 alpha=1.0,
-#             )
+            axes[i, j].set_xticks([])
+            axes[i, j].set_yticks([])
 
-#             if j == 0:
-#                 axes[i, j].set_ylabel(args.methods[i + 1], labelpad=10)
+            value = parameters[par]
+            mask = parameters["mask_ac"]
 
-#         divider = make_axes_locatable(axes[-1, j])
-#         cax = divider.new_vertical(size="5%", pad=0.2, pack_start=True)
-#         # Add a colorbar to the new axes
-#         fig.add_axes(cax)
-#         fig.colorbar(im, cax=cax, orientation="horizontal")
+            im = axes[i, j].imshow(
+                value,
+                cmap=cmaps[j],
+                vmin=bounds[j][0],
+                vmax=bounds[j][1],
+                interpolation="bicubic",
+                alpha=1.0,
+            )
 
-#     plt.savefig(os.path.join(args.output, figname + ".png"))
+            mu = np.mean(value[mask])
+            std = np.std(value[mask])
+            xlabel = f"$\mu$={str(round(mu, 1))}, $\sigma$={str(round(std, 1))}"
 
+            axes[i, j].set_xlabel(xlabel, labelpad=5, fontsize=12)
 
-# def desc_map(
-#     args,
-#     desc=[
-#         "pente",
-#         "ddr",
-#         "karst2019_shyreg",
-#         "foret",
-#         "urbain",
-#         "resutilpot",
-#         "vhcapa",
-#     ],
-#     cmap="terrain",
-#     figname="desc_map",
-#     figsize=(12, 3),
-# ):
-#     print("</> Plotting descriptors map...")
+            if j == 0:
+                axes[i, j].set_ylabel(
+                    f"Cal {args.gauge}\n{method}", labelpad=10, fontsize=12
+                )
 
-#     descriptor = dict.fromkeys(desc, None)
+            # Add a colorbar to the new axes
+            clb = fig.colorbar(im, orientation="horizontal")
+            # Set fontsize for colorbar
+            clb.ax.tick_params(labelsize=10)
 
-#     with h5py.File(os.path.join(args.data, "descriptors.hdf5"), "r") as f:
-#         for name in desc:
-#             descriptor[name] = np.copy(f[name][:])
-
-#     fig, axes = plt.subplots(nrows=1, ncols=len(desc), figsize=figsize)
-
-#     for i, darr in enumerate(descriptor.values()):
-#         axes[i].set_title(rf"$d_{i + 1}$", fontsize=10)
-
-#         axes[i].yaxis.grid(False)
-#         axes[i].xaxis.grid(False)
-
-#         axes[i].set_xticks([])
-#         axes[i].set_yticks([])
-
-#         im = axes[i].imshow(
-#             darr,
-#             cmap=cmap,
-#             interpolation="bicubic",
-#             alpha=1.0,
-#         )
-
-#         cbar = fig.colorbar(
-#             im, ax=axes[i], orientation="horizontal", pad=0.1, aspect=15
-#         )
-
-#         cbar.ax.tick_params(labelsize=8)
-
-#     plt.savefig(os.path.join(args.output, figname + ".png"))
+    plt.savefig(os.path.join(args.output, figname + ".png"))
 
 
-# def linear_cov(
-#     args,
-#     params=["exc", "lr", "cft", "cp"],
-#     math_params=[r"$k_{exc}$", r"$l_r$", r"$c_{ft}$", r"$c_p$"],
-#     desc=[
-#         "pente",
-#         "ddr",
-#         "karst2019_shyreg",
-#         "foret",
-#         "urbain",
-#         "resutilpot",
-#         "vhcapa",
-#     ],
-#     figname="linear_cov",
-#     figsize=(4, 6),
-# ):
-#     print("</> Plotting linear covariance matrix...")
+def desc_map(
+    cmap="terrain",
+    figname="desc_map",
+    figsize=(15, 4),
+):
+    print("</> Plotting descriptors map...")
 
-#     descriptor = dict.fromkeys(desc, None)
+    with open("descriptors.pickle", "rb") as f:
+        descriptor = pickle.load(f)
 
-#     with h5py.File(os.path.join(args.data, "descriptors.hdf5"), "r") as f:
-#         for name in desc:
-#             descriptor[name] = np.copy(f[name][:])
+    fig, axes = plt.subplots(nrows=1, ncols=len(descriptor.keys()), figsize=figsize)
 
-#     fig, axes = plt.subplots(nrows=3, ncols=1, figsize=figsize, constrained_layout=True)
+    for i, darr in enumerate(descriptor.values()):
+        axes[i].set_title(rf"$d_{i + 1}$", fontsize=12)
 
-#     for k, mod in enumerate(args.models_ddt[1:]):
-#         cov_mat = np.zeros((len(params), len(desc)))
+        axes[i].yaxis.grid(False)
+        axes[i].xaxis.grid(False)
 
-#         for j, dei in enumerate(descriptor.values()):
-#             for i, par in enumerate(params):
-#                 pai = np.copy(mod[par])
+        axes[i].set_xticks([])
+        axes[i].set_yticks([])
 
-#                 # create a linear regression model
-#                 lm = LinearRegression()
+        im = axes[i].imshow(
+            darr,
+            cmap=cmap,
+            interpolation="bicubic",
+            alpha=1.0,
+        )
 
-#                 # fit the model to the data
-#                 lm.fit(dei.reshape(-1, 1), pai.reshape(-1, 1))
+        cbar = fig.colorbar(
+            im, ax=axes[i], orientation="horizontal", pad=0.1, aspect=15
+        )
 
-#                 # calculate the predicted values
-#                 pai_pred = lm.predict(dei.reshape(-1, 1)).reshape(pai.shape)
+        cbar.ax.tick_params(labelsize=8)
 
-#                 # calculate the total sum of squares (TSS)
-#                 TSS = ((pai - np.mean(pai)) ** 2).sum()
+    plt.savefig(os.path.join(args.output, figname + ".png"))
 
-#                 # calculate the residual sum of squares (RSS)
-#                 RSS = ((pai - pai_pred) ** 2).sum()
 
-#                 # calculate R-squared
-#                 cov_mat[i, j] = 1 - (RSS / TSS)
+def linear_cov(
+    args,
+    params=["cp", "ct", "kexc", "llr"],
+    math_params=[r"$c_p$", r"$c_t$", r"$k_{exc}$", r"$l_{l_r}$"],
+    figname="linear_cov",
+    figsize=(5, 4),
+):
+    print("</> Plotting linear covariance matrix...")
 
-#         ytl = [rf"$d_{num + 1}$" for num in range(len(desc)) if k == 0]
+    with open("descriptors.pickle", "rb") as f:
+        descriptor = pickle.load(f)
 
-#         axes[k].yaxis.grid(False)
-#         axes[k].xaxis.grid(False)
+    fig, axes = plt.subplots(
+        nrows=len(args.methods[1:]), ncols=1, figsize=figsize, constrained_layout=True
+    )
 
-#         sns.heatmap(
-#             cov_mat,
-#             xticklabels=ytl,
-#             yticklabels=math_params,
-#             vmin=0,
-#             vmax=1,
-#             square=True,
-#             cbar=k == 2,
-#             cbar_kws=dict(
-#                 use_gridspec=False, location="bottom", shrink=0.75, aspect=40
-#             ),
-#             ax=axes[k],
-#             cmap="crest",
-#         )
+    for k, method in enumerate(args.methods[1:]):
+        with open(
+            os.path.join(args.modeldir, f"p1/{method}_parameters.pickle"), "rb"
+        ) as f:
+            parameters = pickle.load(f)
 
-#         axes[k].tick_params(
-#             labelright=True,
-#             labelleft=False,
-#             labelbottom=False,
-#             labeltop=True,
-#             labelrotation=0,
-#         )
+        cov_mat = np.zeros((len(params), len(descriptor.keys())))
 
-#         axes[k].set_ylabel(args.methods[k + 1], fontsize=13, labelpad=10)
+        for j, dei in enumerate(descriptor.values()):
+            for i, par_name in enumerate(params):
+                pai = parameters[par_name]
 
-#     plt.savefig(os.path.join(args.output, figname + ".png"))
+                # create a linear regression model
+                lm = LinearRegression()
+
+                # fit the model to the data
+                lm.fit(dei.reshape(-1, 1), pai.reshape(-1, 1))
+
+                # calculate the predicted values
+                pai_pred = lm.predict(dei.reshape(-1, 1)).reshape(pai.shape)
+
+                # calculate the total sum of squares (TSS)
+                TSS = ((pai - np.mean(pai)) ** 2).sum()
+
+                # calculate the residual sum of squares (RSS)
+                RSS = ((pai - pai_pred) ** 2).sum()
+
+                # calculate R-squared
+                cov_mat[i, j] = 1 - (RSS / TSS)
+
+        ytl = [rf"$d_{num + 1}$" for num in range(len(descriptor.keys())) if k == 0]
+
+        axes[k].yaxis.grid(False)
+        axes[k].xaxis.grid(False)
+
+        sns.heatmap(
+            cov_mat,
+            xticklabels=ytl,
+            yticklabels=math_params,
+            vmin=0,
+            vmax=1,
+            square=True,
+            cbar=(k == len(args.methods[1:]) - 1),
+            cbar_kws=dict(
+                use_gridspec=False, location="bottom", shrink=0.55, aspect=40
+            ),
+            ax=axes[k],
+            cmap="crest",
+        )
+
+        axes[k].tick_params(
+            labelright=True,
+            labelleft=False,
+            labelbottom=False,
+            labeltop=True,
+            labelrotation=0,
+        )
+
+        axes[k].set_ylabel(
+            f"Cal {args.gauge}\n{args.methods[k + 1]}", fontsize=12, labelpad=10
+        )
+
+    plt.savefig(os.path.join(args.output, figname + ".png"))
 
 
 def boxplot_signatures(
@@ -688,13 +682,10 @@ def boxplot_signatures(
         fontsize=14,
     )
 
-    # plt.tight_layout()
-
-    # plt.savefig(os.path.join(args.output, figname + ".png"))
-    plt.show()
+    plt.savefig(os.path.join(args.output, figname + ".png"))
 
 
-def cost_gradient(args, figsize=(15, 9), figname="projected_gradient"):
+def cost_gradient(args, maxiter=350, figsize=(15, 9), figname="projected_gradient"):
     print("</> Plotting cost and projected gradient...")
 
     # Define colors and line styles for each method
@@ -712,7 +703,7 @@ def cost_gradient(args, figsize=(15, 9), figname="projected_gradient"):
             cost = load_pickle.iter_cost
 
             projg = load_pickle.iter_projg
-            projg = np.array(projg)[:350]
+            projg = np.array(projg)[:maxiter]
 
         axes[0].plot(
             cost,
@@ -741,13 +732,12 @@ def cost_gradient(args, figsize=(15, 9), figname="projected_gradient"):
         # Set x and y axis labels, title and legend
         axes[j].set_xlabel("Iteration/Epoch", fontsize=14)
 
-        axes[j].set_xlim([-2, 350])
+        axes[j].set_xlim([-2, maxiter])
 
     axes[0].set_ylabel("Cost", fontsize=14)
     axes[1].set_ylabel("Proj_G", fontsize=14)
 
-    # plt.savefig(os.path.join(args.output, figname + ".png"))
-    plt.show()
+    plt.savefig(os.path.join(args.output, figname + ".png"))
 
 
 ##########
@@ -768,11 +758,16 @@ if __name__ == "__main__":
 
     boxplot_signatures(args, figsize=(20, 5))
 
-    # param_map(args)
+    param_map(
+        args, bounds=[(0, 750), (0, 250), (-20, 5), (0, 200)]
+    )  # for upstream setup
+    # param_map(
+    #     args, bounds=[(0, 800), (0, 150), (-10, 2.5), (0, 100)]
+    # )  # for downstream setup
 
-    # desc_map(args)
+    desc_map()
 
-    # linear_cov(args)
+    linear_cov(args)
 
     boxplot_scores_by_nature(args, fobj="NSE", figsize=(15, 5))
     boxplot_scores_by_nature(args, fobj="KGE", figsize=(15, 5))
