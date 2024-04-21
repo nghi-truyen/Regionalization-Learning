@@ -685,7 +685,9 @@ def boxplot_signatures(
     plt.savefig(os.path.join(args.output, figname + ".png"))
 
 
-def cost_gradient(args, maxiter=360, figsize=(15, 9), figname="projected_gradient"):
+def cost_gradient(
+    args, maxiter=360, figsize=(15, 9), figname="cost_projected_gradient"
+):
     print("</> Plotting cost and projected gradient...")
 
     # Define colors and line styles for each method
