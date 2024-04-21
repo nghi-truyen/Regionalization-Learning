@@ -760,14 +760,9 @@ if __name__ == "__main__":
 
     boxplot_signatures(args, figsize=(20, 5))
 
-    param_map(
-        args, bounds=[(0, 750), (0, 250), (-20, 5), (0, 200)]
-    )  # for upstream setup
-    # param_map(
-    #     args, bounds=[(0, 800), (0, 150), (-10, 2.5), (0, 100)]
-    # )  # for downstream setup
+    param_map(args, bounds=((150, 900), (0, 150), (-15, 5), (0, 150)))
 
-    # desc_map()
+    desc_map()
 
     linear_cov(args)
 
