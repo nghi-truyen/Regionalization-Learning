@@ -462,7 +462,7 @@ def linear_cov(
     params=["cp", "ct", "kexc", "llr"],
     math_params=[r"$c_p$", r"$c_t$", r"$k_{exc}$", r"$l_{l_r}$"],
     figname="linear_cov",
-    figsize=(5, 4),
+    figsize=(6, 4),
 ):
     print("</> Plotting linear covariance matrix...")
 
@@ -540,7 +540,7 @@ def linear_cov(
 
 def boxplot_signatures(
     args,
-    sign=["Ebf", "Eff", "Epf"],
+    sign=["Eff", "Ebf", "Erc", "Elt", "Epf"],
     figname="signatures",
     figsize=(12, 7),
 ):
@@ -758,13 +758,13 @@ if __name__ == "__main__":
     boxplot_scores(args, fobj="NSE", figsize=(15, 5.5))
     boxplot_scores(args, fobj="KGE", figsize=(15, 5.5))
 
-    boxplot_signatures(args, figsize=(20, 5))
+    boxplot_signatures(args, figsize=(18.5, 5), sign=["Erc", "Eff", "Epf"])
 
     param_map(args, bounds=((150, 900), (0, 150), (-15, 5), (0, 150)))
 
     desc_map()
 
-    linear_cov(args)
+    linear_cov(args, figsize=(5, 4))
 
     boxplot_scores_by_nature(args, fobj="NSE", figsize=(15, 5))
     boxplot_scores_by_nature(args, fobj="KGE", figsize=(15, 5))
