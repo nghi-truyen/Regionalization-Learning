@@ -364,14 +364,16 @@ def param_map(
     args,
     params=["cp", "ct", "kexc", "llr"],
     math_params=[r"$c_p$", r"$c_t$", r"$k_{exc}$", r"$l_{l_r}$"],
-    cmaps=["viridis", "YlGnBu", "RdBu", "Purples"],
     bounds=[(0, 1000), (0, 1000), (-50, 50), (0, 1000)],
+    cmap="Spectral",
     figname="param_map",
     figsize=(10, 7),
 ):
     print("</> Plotting parameters map...")
 
-    fig, axes = plt.subplots(nrows=2, ncols=len(params), figsize=figsize)
+    fig, axes = plt.subplots(
+        nrows=len(args.methods[1:]), ncols=len(params), figsize=figsize
+    )
 
     for i, method in enumerate(args.methods[1:]):
         with open(
@@ -394,7 +396,7 @@ def param_map(
 
             im = axes[i, j].imshow(
                 value,
-                cmap=cmaps[j],
+                cmap=cmap,
                 vmin=bounds[j][0],
                 vmax=bounds[j][1],
                 interpolation="bicubic",
@@ -696,7 +698,7 @@ def cost_gradient(
         "#55a868",
     ]  # corresponding colors for palette='deep'
 
-    fig, axes = plt.subplots(nrows=2, figsize=figsize)
+    fig, axes = plt.subplots(nrows=len(args.methods[1:]), figsize=figsize)
 
     for i, mtd in enumerate(args.methods[1:]):
         with open(os.path.join(args.modeldir, f"p1/{mtd}_ret.pickle"), "rb") as f:
