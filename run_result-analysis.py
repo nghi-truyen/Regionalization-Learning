@@ -1,31 +1,27 @@
 import os
 import argparse
-from tqdm import tqdm
+import pickle
+import random
 
 import seaborn as sns
 import numpy as np
 import pandas as pd
 import h5py
 from sklearn.linear_model import LinearRegression
-from scipy.stats import gaussian_kde
 
 import matplotlib.pyplot as plt
-
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-from preprocessing import load_data
+import matplotlib as mpl
 
 import smash
-from smash.solver._mwd_cost import nse, kge
 
-if smash.__version__ >= "0.3.1":
+if smash.__version__ >= "1.0":
     print("===================================")
     print(f"smash version: {smash.__version__}")
     print("===================================")
 
 else:
     raise ValueError(
-        "This code requires a minimum version of smash 0.3.1 or higher. Please update your smash installation."
+        "This code requires a minimum version of smash 1.0 or higher. Please update your smash installation."
     )
 
 
@@ -38,11 +34,16 @@ def initialize_args():  # do not set new attr or modify any attr of args outside
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "-d", "-data", "--data", type=str, help="Select the data directory"
+        "-m", "-modeldir", "--modeldir", type=str, help="Select the model directory"
     )
 
     parser.add_argument(
-        "-m", "-modeldir", "--modeldir", type=str, help="Select the model directory"
+        "-g",
+        "-gauge",
+        "--gauge",
+        type=str,
+        help="Select gauge type that has been used in the calibration process",
+        choices=["upstream", "downstream", "intermediate", "independent"],
     )
 
     parser.add_argument(
@@ -59,33 +60,11 @@ def initialize_args():  # do not set new attr or modify any attr of args outside
     if not os.path.exists(args.output):
         os.makedirs(args.output)
 
-    args.cal_code = pd.read_csv(os.path.join(args.data, "cal_code.csv"))[
-        "cal"
-    ].to_list()
-
-    args.val_code = pd.read_csv(os.path.join(args.data, "val_code.csv"))[
-        "val"
-    ].to_list()
-
     args.methods = [
         "Uniform",
         "Multi-linear",
-        "Multi-polynomial",
         "ANN",
     ]
-    args.filename_method = [
-        "uniform",
-        "hyper-linear",
-        "hyper-polynomial",
-        "ann",
-    ]
-
-    args.models_ddt = [
-        smash.read_model_ddt(os.path.join(args.modeldir, method + ".hdf5"))
-        for method in tqdm(args.filename_method, desc="</> Reading models ddt...")
-    ]
-
-    args.cost = {"NSE": nse, "KGE": kge}
 
     return args
 
@@ -95,248 +74,200 @@ def initialize_args():  # do not set new attr or modify any attr of args outside
 ##############################
 
 
-def radialplot(args, fobj="NSE", figname="radialplots", figsize=(12, 6)):
-    print("</> Plotting radialplots...")
+def boxplot_scores(args, fobj="NSE", figname="scores", figsize=(15, 8)):
+    print("</> Plotting boxplots...")
 
-    cost_cal = {mtd: [] for mtd in args.methods}
-    cost_sval = {mtd: [] for mtd in args.methods}
-    code_cal = []
-    code_sval = []
+    df_reg_p1 = pd.read_csv(os.path.join(args.modeldir, "p1/scores.csv"))
+    df_loc_p1 = pd.read_csv(
+        os.path.join(os.path.dirname(args.modeldir), "local/p1/scores.csv")
+    )
+    df_loc_p1 = df_loc_p1.drop(columns=["nature"])
+    df_p1 = pd.merge(df_reg_p1, df_loc_p1, on="code", how="right")
 
-    for i, code in enumerate(args.models_ddt[0]["code"]):
-        for model, method in zip(args.models_ddt, args.methods):
-            qo = model["qobs"][i]
-            qs = model["qsim"][i]
+    df_reg_p2 = pd.read_csv(os.path.join(args.modeldir, "p2/scores.csv"))
+    df_loc_p2 = pd.read_csv(
+        os.path.join(os.path.dirname(args.modeldir), "local/p2/scores.csv")
+    )
+    df_loc_p2 = df_loc_p2.drop(columns=["nature"])
+    df_p2 = pd.merge(df_reg_p2, df_loc_p2, on="code", how="right")
 
-            if code in args.cal_code:
-                code_cal.append(code) if code not in code_cal else code_cal
-                cost_cal[method].append(1 - args.cost[fobj](qo, qs))
+    df_merge = []
 
-            elif code in args.val_code:
-                code_sval.append(code) if code not in code_sval else code_sval
-                cost_sval[method].append(1 - args.cost[fobj](qo, qs))
+    n_gauged = len(df_p1[df_p1["nature"] == args.gauge])
+    n_ungauged = len(df_p1) - n_gauged
+
+    labels_col = [
+        f"Cal ({n_gauged})",
+        f"S_Val ({n_ungauged})",
+        f"T_Val ({n_gauged})",
+        f"S-T_Val ({n_ungauged})",
+    ]
+
+    for i, dfreg in enumerate([df_p1, df_p2]):
+        # Melt the DataFrame to convert it to long format
+        df = pd.melt(
+            dfreg[
+                ["code", "nature", "domain"]
+                + [f"{fobj}_Uniform_loc", f"{fobj}_Distributed_loc"]
+                + [f"{fobj}_{m}" for m in args.methods]
+            ],
+            id_vars=["code", "nature", "domain"],
+            var_name="Metric",
+            value_name=fobj,
+        )
+
+        # Extract the mapping information from the Metric column
+        df["Mapping"] = df["Metric"].apply(
+            lambda x: x.split("_")[1] + " (reg)"
+            if len(x.split("_")) < 3
+            else x.split("_")[1] + " (loc)"
+        )
+        mapping_order = df["Mapping"].unique()
+
+        # Drop the Metric column
+        df = df.drop(columns=["Metric"])
+
+        # Replace "cal" and "val" in the 'domain' column
+        df["domain"] = df["domain"].replace(
+            {
+                "cal": labels_col[0] if i == 0 else labels_col[2],
+                "val": labels_col[1] if i == 0 else labels_col[3],
+            }
+        )
+
+        df_merge.append(df)
+
+    df_merge = pd.concat(df_merge, ignore_index=True)
 
     colors = [
+        "#a2cffe",
+        "#fed0fc",
         "#4c72b0",
         "#dd8452",
         "#55a868",
-        "#c44e52",
-    ]  # corresponding colors for palette='deep'
-
-    fig, (ax1, ax2) = plt.subplots(
-        nrows=1, ncols=2, figsize=figsize, subplot_kw={"projection": "polar"}
-    )
-
-    ## CAL ##
-
-    indsort_cal = np.argsort(cost_cal["ANN"])
-    rad = np.linspace(0, 2 * np.pi, len(indsort_cal), endpoint=False)
-
-    for mtd, color in zip(args.methods, colors):
-        ax1.plot(
-            rad,
-            np.array(cost_cal[mtd])[indsort_cal],
-            linewidth=2,
-            linestyle="solid",
-            c=color,
-        )
-
-    # set the labels for each point on the plot
-    ax1.set_xticks(rad)
-    ax1.set_xticklabels(np.array(code_cal)[indsort_cal])
-
-    ax1.set_rticks([0, 0.2, 0.4, 0.6, 0.8])  # Less radial ticks
-    ax1.set_rlabel_position(-25)  # Move radial labels away from plotted line
-    ax1.tick_params(axis="both", labelsize=10)  # Custom font size and scale values
-    ax1.spines["polar"].set_visible(
-        False
-    )  # Hide the border of the circle behind the text
-
-    ax1.set_rmin(-0.25)
-    ax1.set_rmax(1)
-
-    ax1.set_title("Cal", va="bottom")
-
-    # Add radial label
-    label_position = ax1.get_rlabel_position()
-    ax1.text(
-        np.radians(label_position - 5),
-        (ax1.get_rmax() + ax1.get_rmin()) / 2,
-        "NSE",
-        rotation=label_position,
-        ha="center",
-        va="center",
-        size=10,
-    )
-
-    ## SPATIAL VAL ##
-
-    indsort_sval = np.argsort(cost_sval["ANN"])
-    rad = np.linspace(0, 2 * np.pi, len(indsort_sval), endpoint=False)
-
-    for mtd, color in zip(args.methods, colors):
-        ax2.plot(
-            rad,
-            np.array(cost_sval[mtd])[indsort_sval],
-            linewidth=2,
-            linestyle="solid",
-            c=color,
-            label=mtd,
-        )
-
-    # set the labels for each point on the plot
-    ax2.set_xticks(rad)
-    ax2.set_xticklabels(np.array(code_sval)[indsort_sval])
-
-    ax2.set_rticks([0, 0.2, 0.4, 0.6, 0.8])  # Less radial ticks
-    ax2.set_rlabel_position(-30)  # Move radial labels away from plotted line
-    ax2.tick_params(axis="both", labelsize=10)  # Custom font size and scale values
-    ax2.spines["polar"].set_visible(
-        False
-    )  # Hide the border of the circle behind the text
-
-    ax2.set_rmin(-0.25)
-    ax2.set_rmax(1)
-
-    ax2.set_title("Spatial Val", va="bottom")
-
-    # Add radial label
-    label_position = ax2.get_rlabel_position()
-    ax2.text(
-        np.radians(label_position - 5),
-        (ax2.get_rmax() + ax2.get_rmin()) / 2,
-        "NSE",
-        rotation=label_position,
-        ha="center",
-        va="center",
-        size=10,
-    )
-
-    # adjust the subplots layout
-    fig.subplots_adjust(wspace=0.35)
-
-    fig.legend(loc="lower center", ncols=4, fontsize=12)
-
-    plt.savefig(os.path.join(args.output, figname + ".png"))
-
-
-def boxplot_and_scatterplot(
-    args, fobj="NSE", figname="box-scatterplots", figsize=(15, 8)
-):
-    print("</> Plotting boxplots and scatterplots...")
-
-    cost = []
-    metd = []
-
-    cal_val = []
-    code_catch = []
-
-    for i, code in enumerate(args.models_ddt[0]["code"]):
-        for model, method in zip(args.models_ddt, args.methods):
-            qo = model["qobs"][i]
-            qs = model["qsim"][i]
-
-            if code in args.cal_code:
-                cal_val.append("Cal")
-
-            elif code in args.val_code:
-                cal_val.append("Spatial Val")
-
-            else:
-                continue
-
-            cost.append(1 - args.cost[fobj](qo, qs))
-
-            metd.append(method)
-
-            code_catch.append(code)
-
-    df = pd.DataFrame(
-        {"code": code_catch, "cal_val": cal_val, "Mapping": metd, fobj: cost}
-    )
+    ]
 
     # Create the plot
-    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=figsize)
+    plt.figure(figsize=figsize)
 
-    # boxplot
-    sns.boxplot(
-        data=df,
-        x="cal_val",
+    # Boxplot
+    bplt = sns.boxplot(
+        data=df_merge,
+        x="domain",
         y=fobj,
         hue="Mapping",
+        hue_order=mapping_order,
         width=0.5,
-        palette="deep",
-        showfliers=True,
-        ax=axes[0],
-        order=["Cal", "Spatial Val"],
+        palette=colors,
+        showfliers=False,
+        order=labels_col,
     )
+    # Set hatch pattern
+    hatch = "/////"
+    mpl.rcParams["hatch.linewidth"] = 0.6
+    for i in range(4):
+        bplt.patches[i].set_hatch(hatch)
+    for i in range(2, 5):
+        bplt.patches[i * len(colors)].set_hatch(hatch)
+        bplt.patches[i * len(colors) + 1].set_hatch(hatch)
 
     # Set title and axis labels
-    axes[0].set(title=None, xlabel=None, ylabel=fobj)
+    plt.title(f"Cal {args.gauge}", loc="left")
+    plt.xlabel(None)
+    plt.ylabel(fobj)
 
     # Set y-axis limits
-    axes[0].set_ylim([-0.25, 1])
+    plt.ylim([-0.25, 1])
 
-    handles, labels = axes[0].get_legend_handles_labels()  # get labels then remove
-    axes[0].legend([], [], frameon=False)
-
-    colors = [
-        "#4c72b0",
-        "#dd8452",
-        "#55a868",
-        "#c44e52",
-    ]  # corresponding colors for palette='deep
-
-    cls = dict(zip(args.methods, colors))
-
-    for i, catch in enumerate(code_catch):
-        if cal_val[i] == "Cal":
-            axes[1].scatter(
-                catch,
-                cost[i],
-                color=cls[metd[i]],
-                marker="s",
-                s=100,
-                label="Cal" if i == 0 else None,
-            )
-
-    for i, catch in enumerate(code_catch):  # to separate cal and val code
-        if cal_val[i] == "Spatial Val":
-            axes[1].scatter(
-                catch,
-                cost[i],
-                color=cls[metd[i]],
-                marker="^",
-                s=100,
-                label="Spatial Val" if i == 0 else None,
-            )
-
-    legend_elements = [
-        plt.Line2D(
-            [0],
-            [0],
-            marker=m,
-            color="None",
-            label=l,
-            linestyle="",
-            markeredgecolor="black",
-            markeredgewidth=1,
-            markersize=8,
-        )
-        for m, l in zip(["s", "^"], ["Cal", "Spatial Val"])
-    ]
-    axes[1].legend(handles=legend_elements, loc="lower left", ncols=2, fontsize=14)
-
-    axes[1].xaxis.set_major_locator(plt.FixedLocator(axes[1].get_xticks()))
-    axes[1].set_xticklabels(axes[1].get_xticklabels(), rotation=75, fontsize=10)
-
-    axes[1].set_ylim(axes[0].get_ylim())
-
-    fig.legend(
+    # Legend
+    handles, labels = plt.gca().get_legend_handles_labels()  # get labels then remove
+    plt.legend(
         handles,
         labels,
         title=None,
         loc="upper center",
+        bbox_to_anchor=(0.61, 1.18),
+        ncol=4,
+        fontsize=14,
+    )
+
+    plt.savefig(os.path.join(args.output, figname + ".png"))
+
+
+def boxplot_scores_by_nature(
+    args, fobj="NSE", figname="scores_by_nature", figsize=(15, 8)
+):
+    print("</> Plotting boxplots...")
+
+    df_reg_p1 = pd.read_csv(os.path.join(args.modeldir, "p1/scores.csv"))
+    df_reg_p2 = pd.read_csv(os.path.join(args.modeldir, "p2/scores.csv"))
+
+    n_count = df_reg_p1["nature"].value_counts()
+
+    df_merge = []
+    col_labels = []
+
+    for t_val, dfreg in zip(["P1, S_Val", "P2, S-T_Val"], [df_reg_p1, df_reg_p2]):
+        dfreg = dfreg[dfreg["domain"] == "val"]
+        dfreg = dfreg.drop(columns=["domain"])
+        # Melt the DataFrame to convert it to long format
+        df = pd.melt(
+            dfreg[["code", "nature"] + [f"{fobj}_{m}" for m in args.methods]],
+            id_vars=["code", "nature"],
+            var_name="Metric",
+            value_name=fobj,
+        )
+
+        # Extract the mapping information from the Metric column
+        df["Mapping"] = df["Metric"].apply(lambda x: x.split("_")[1])
+
+        # Drop the Metric column
+        df = df.drop(columns=["Metric"])
+
+        du = "upstream" if args.gauge == "downstream" else "downstream"
+        dict_count = {
+            nature: f"{nature.capitalize()} ({n_count[nature]})\n{t_val}"
+            for nature in [du, "intermediate", "independent"]
+        }
+        df["nature"] = df["nature"].replace(dict_count)
+
+        df_merge.append(df)
+        col_labels += list(dict_count.values())
+
+    df_merge = pd.concat(df_merge, ignore_index=True)
+
+    # Create the plot
+    plt.figure(figsize=figsize)
+
+    # Boxplot
+    sns.boxplot(
+        data=df_merge,
+        x="nature",
+        y=fobj,
+        hue="Mapping",
+        hue_order=args.methods,
+        width=0.5,
+        palette="deep",
+        showfliers=False,
+        order=col_labels,
+    )
+
+    # Set title and axis labels
+    plt.title(f"Cal {args.gauge}", loc="left")
+    plt.xlabel(None)
+    plt.ylabel(fobj)
+
+    # Set y-axis limits
+    plt.ylim([-0.25, 1])
+
+    # Legend
+    handles, labels = plt.gca().get_legend_handles_labels()  # get labels then remove
+    plt.legend(
+        handles,
+        labels,
+        title=None,
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.12),
         ncol=len(args.methods),
         fontsize=14,
     )
@@ -345,18 +276,27 @@ def boxplot_and_scatterplot(
 
 
 def hydrograph(
-    args, cal_val="cal", figname="hydrograph_cal", figsize: tuple | None = None
+    args,
+    period="p1",
+    figname="hydrograph_p1",
+    extration=None,
+    figsize: tuple | None = None,
 ):  # figsize=None: auto adjusted figure size
-    print(f"</> Plotting hydrograph ({cal_val})...")
+    print(f"</> Plotting hydrograph ({period})...")
 
-    if cal_val.lower() == "cal":
-        codes = args.cal_code
+    dti = pd.date_range(
+        start="2016-08-01" if period == "p1" else "2020-08-01",
+        end="2020-07-31" if period == "p1" else "2022-07-31",
+        freq="h",
+    )[1:]
 
-    elif cal_val.lower() == "val":
-        codes = args.val_code
+    df = pd.read_csv(os.path.join(args.modeldir, f"{period}/scores.csv"))
 
-    else:
-        raise ValueError(f"cal_val should be a str, either cal or val, not {cal_val}")
+    codes = df["code"].to_list()
+    indices = df.index.tolist()
+
+    if not extration is None:  # randomly extracting hydrograph to be plotted
+        indices, codes = zip(*random.sample(list(zip(indices, codes)), extration))
 
     nr = len(codes)
     nc = len(args.methods)
@@ -367,40 +307,42 @@ def hydrograph(
     fig, axes = plt.subplots(nrows=nr, ncols=nc, figsize=figsize)
 
     for j, mtd in enumerate(args.methods):
+        with open(
+            os.path.join(args.modeldir, f"{period}/{mtd}_discharges.pickle"), "rb"
+        ) as f:
+            q = pickle.load(f)
+
         axes[0, j].set_title(mtd, fontsize=12)
 
-        ind_code = [
-            ind for ind, c in enumerate(args.models_ddt[j]["code"]) if c in codes
-        ]
-
-        for i, ic in enumerate(ind_code):
-            qo = np.copy(args.models_ddt[j]["qobs"][ic, :])
-            qs = np.copy(args.models_ddt[j]["qsim"][ic, :])
+        for i, ind in enumerate(indices):
+            qo = np.copy(q["obs"][ind, :])
+            qs = np.copy(q["sim"][ind, :])
 
             qo[np.where(qo < 0)] = np.nan
             qs[np.where(qs < 0)] = np.nan
 
-            t = range(len(qo))
-
             ax = axes[i, j]
 
-            ax.plot(t, qo, color="red", label="Observed", linewidth=2)
-            ax.plot(t, qs, color="blue", linestyle="-.", label="Simulated", linewidth=1)
+            ax.plot(dti, qo, color="red", label="Observed", linewidth=2)
+            ax.plot(
+                dti, qs, color="blue", linestyle="-.", label="Simulated", linewidth=1
+            )
 
             ax.tick_params(axis="both", which="both", labelsize=10)
 
-            ax.spines["top"].set_visible(False)
-            ax.spines["right"].set_visible(False)
-            ax.spines["bottom"].set_visible(False)
-            ax.spines["left"].set_visible(False)
-
-            ax.set_xticks([])
-            ax.set_xticklabels([])
+            if i < len(indices) - 1:
+                ax.set_xticklabels([])
+            else:
+                ax.tick_params(axis="x", labelrotation=60)
 
             ax.xaxis.grid(False)
 
             if j > 0:  # remove ticklabel
                 ax.set_yticklabels([])
+            else:
+                ax.set_ylabel(
+                    codes[i][:-2] + f"\n({df['nature'].iloc[ind]})", fontsize=10
+                )
 
     # set the same scale for y-axis
     for i in range(axes.shape[0]):
@@ -413,141 +355,87 @@ def hydrograph(
 
     # Add a legend to the figure
     handles, labels = axes[0, 0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="lower center", ncol=2, fontsize=12)
-
-    # Add axis name
-    fig.text(0.5, 0.075, "Time step", ha="center", fontsize=12)
-    fig.text(
-        0.075, 0.5, "Discharge (m$^3$/s)", va="center", rotation="vertical", fontsize=12
-    )
+    fig.legend(handles, labels, loc="upper center", ncol=2, fontsize=12)
 
     plt.savefig(os.path.join(args.output, figname + ".png"))
 
 
 def param_map(
     args,
-    params=["exc", "lr", "cft", "cp"],
-    math_params=[r"$k_{exc}$", r"$l_r$", r"$c_{ft}$", r"$c_p$"],
-    cmaps=["RdBu", "Purples", "YlGnBu", "viridis"],
-    bounds=[(-20, 5), (1, 200), (1, 1000), (2, 2000)],
+    params=["cp", "ct", "kexc", "llr"],
+    math_params=[r"$c_p$", r"$c_t$", r"$k_{exc}$", r"$l_{l_r}$"],
+    bounds=[(0, 1000), (0, 1000), (-50, 50), (0, 1000)],
+    cmap="Spectral",
     figname="param_map",
-    figsize=(10, 9),
+    figsize=(10, 7),
 ):
     print("</> Plotting parameters map...")
 
-    fig, axes = plt.subplots(nrows=3, ncols=len(params), figsize=figsize)
+    fig, axes = plt.subplots(
+        nrows=len(args.methods[1:]), ncols=len(params), figsize=figsize
+    )
 
-    for j, par in enumerate(params):
-        axes[0, j].set_title(math_params[j])
+    for i, method in enumerate(args.methods[1:]):
+        with open(
+            os.path.join(args.modeldir, f"p1/{method}_parameters.pickle"), "rb"
+        ) as f:
+            parameters = pickle.load(f)
 
-        for i, mod in enumerate(args.models_ddt[1:]):
+        for j, par in enumerate(params):
+            if i == 0:
+                axes[0, j].set_title(math_params[j], fontsize=14)
+
             axes[i, j].yaxis.grid(False)
             axes[i, j].xaxis.grid(False)
 
             axes[i, j].set_xticks([])
             axes[i, j].set_yticks([])
 
+            value = parameters[par]
+            mask = parameters["mask_ac"]
+
             im = axes[i, j].imshow(
-                mod[par],
-                cmap=cmaps[j],
+                value,
+                cmap=cmap,
                 vmin=bounds[j][0],
                 vmax=bounds[j][1],
                 interpolation="bicubic",
                 alpha=1.0,
             )
 
+            mu = np.mean(value[mask])
+            std = np.std(value[mask])
+            xlabel = f"$\mu$={str(round(mu, 1))}, $\sigma$={str(round(std, 1))}"
+
+            axes[i, j].set_xlabel(xlabel, labelpad=5, fontsize=12)
+
             if j == 0:
-                axes[i, j].set_ylabel(args.methods[i + 1], labelpad=10)
+                axes[i, j].set_ylabel(
+                    f"Cal {args.gauge}\n{method}", labelpad=10, fontsize=12
+                )
 
-        divider = make_axes_locatable(axes[-1, j])
-        cax = divider.new_vertical(size="5%", pad=0.2, pack_start=True)
-        # Add a colorbar to the new axes
-        fig.add_axes(cax)
-        fig.colorbar(im, cax=cax, orientation="horizontal")
-
-    plt.savefig(os.path.join(args.output, figname + ".png"))
-
-
-def cost_descent(args, niter=250, figsize=(12, 6), figname="cost_descent"):
-    print("</> Plotting cost descent...")
-
-    x = range(1, niter + 1)
-
-    # Define colors and line styles for each method
-    colors = [
-        "#dd8452",
-        "#55a868",
-        "#c44e52",
-    ]  # corresponding colors for palette='deep'
-    linestyles = ["-", ":", "-."]
-    line_kwargs = {"linewidth": 2}
-
-    fig, ax = plt.subplots(figsize=figsize)
-
-    for i, mtd in enumerate(args.filename_method[1:]):
-        if mtd == "ann":
-            J = np.loadtxt(
-                os.path.join(args.modeldir, "outterminal/" + mtd + ".txt"),
-                usecols=(5, 9),
-            )
-        else:
-            J = np.loadtxt(
-                os.path.join(args.modeldir, "outterminal/" + mtd + ".txt"),
-                usecols=(8, 12),
-            )
-
-        ax.plot(
-            x,
-            J[: len(x), 0],
-            label=args.methods[i + 1],  # without uniform method
-            color=colors[i],
-            linestyle=linestyles[i],
-            **line_kwargs,
-        )
-
-    # Set x and y axis labels, title and legend
-    ax.set_xlabel("Iteration", fontsize=14)
-    ax.set_ylabel("Cost", fontsize=14)
-    # ax.set_title("Multisites Optimization", fontsize=16, fontweight="bold")
-    ax.legend(fontsize=12)
-
-    # Customize tick labels and grid lines
-    ax.tick_params(axis="both", which="major", labelsize=12, width=2, length=6)
-    ax.tick_params(axis="both", which="minor", labelsize=10, width=1, length=4)
-    ax.grid(
-        True, which="major", axis="both", linestyle="--", color="lightgray", alpha=0.7
-    )
+            # Add a colorbar to the new axes
+            clb = fig.colorbar(im, orientation="horizontal")
+            # Set fontsize for colorbar
+            clb.ax.tick_params(labelsize=10)
 
     plt.savefig(os.path.join(args.output, figname + ".png"))
 
 
 def desc_map(
-    args,
-    desc=[
-        "pente",
-        "ddr",
-        "karst2019_shyreg",
-        "foret",
-        "urbain",
-        "resutilpot",
-        "vhcapa",
-    ],
     cmap="terrain",
     figname="desc_map",
-    figsize=(12, 3),
+    figsize=(15, 4),
 ):
     print("</> Plotting descriptors map...")
 
-    descriptor = dict.fromkeys(desc, None)
+    with open("data/descriptors.pickle", "rb") as f:
+        descriptor = pickle.load(f)
 
-    with h5py.File(os.path.join(args.data, "descriptors.hdf5"), "r") as f:
-        for name in desc:
-            descriptor[name] = np.copy(f[name][:])
-
-    fig, axes = plt.subplots(nrows=1, ncols=len(desc), figsize=figsize)
+    fig, axes = plt.subplots(nrows=1, ncols=len(descriptor.keys()), figsize=figsize)
 
     for i, darr in enumerate(descriptor.values()):
-        axes[i].set_title(rf"$d_{i + 1}$", fontsize=10)
+        axes[i].set_title(rf"$d_{i + 1}$", fontsize=12)
 
         axes[i].yaxis.grid(False)
         axes[i].xaxis.grid(False)
@@ -573,36 +461,31 @@ def desc_map(
 
 def linear_cov(
     args,
-    params=["exc", "lr", "cft", "cp"],
-    math_params=[r"$k_{exc}$", r"$l_r$", r"$c_{ft}$", r"$c_p$"],
-    desc=[
-        "pente",
-        "ddr",
-        "karst2019_shyreg",
-        "foret",
-        "urbain",
-        "resutilpot",
-        "vhcapa",
-    ],
+    params=["cp", "ct", "kexc", "llr"],
+    math_params=[r"$c_p$", r"$c_t$", r"$k_{exc}$", r"$l_{l_r}$"],
     figname="linear_cov",
-    figsize=(4, 6),
+    figsize=(6, 4),
 ):
     print("</> Plotting linear covariance matrix...")
 
-    descriptor = dict.fromkeys(desc, None)
+    with open("data/descriptors.pickle", "rb") as f:
+        descriptor = pickle.load(f)
 
-    with h5py.File(os.path.join(args.data, "descriptors.hdf5"), "r") as f:
-        for name in desc:
-            descriptor[name] = np.copy(f[name][:])
+    fig, axes = plt.subplots(
+        nrows=len(args.methods[1:]), ncols=1, figsize=figsize, constrained_layout=True
+    )
 
-    fig, axes = plt.subplots(nrows=3, ncols=1, figsize=figsize, constrained_layout=True)
+    for k, method in enumerate(args.methods[1:]):
+        with open(
+            os.path.join(args.modeldir, f"p1/{method}_parameters.pickle"), "rb"
+        ) as f:
+            parameters = pickle.load(f)
 
-    for k, mod in enumerate(args.models_ddt[1:]):
-        cov_mat = np.zeros((len(params), len(desc)))
+        cov_mat = np.zeros((len(params), len(descriptor.keys())))
 
         for j, dei in enumerate(descriptor.values()):
-            for i, par in enumerate(params):
-                pai = np.copy(mod[par])
+            for i, par_name in enumerate(params):
+                pai = parameters[par_name]
 
                 # create a linear regression model
                 lm = LinearRegression()
@@ -622,7 +505,7 @@ def linear_cov(
                 # calculate R-squared
                 cov_mat[i, j] = 1 - (RSS / TSS)
 
-        ytl = [rf"$d_{num + 1}$" for num in range(len(desc)) if k == 0]
+        ytl = [rf"$d_{num + 1}$" for num in range(len(descriptor.keys())) if k == 0]
 
         axes[k].yaxis.grid(False)
         axes[k].xaxis.grid(False)
@@ -634,9 +517,9 @@ def linear_cov(
             vmin=0,
             vmax=1,
             square=True,
-            cbar=k == 2,
+            cbar=(k == len(args.methods[1:]) - 1),
             cbar_kws=dict(
-                use_gridspec=False, location="bottom", shrink=0.75, aspect=40
+                use_gridspec=False, location="bottom", shrink=0.55, aspect=40
             ),
             ax=axes[k],
             cmap="crest",
@@ -650,210 +533,213 @@ def linear_cov(
             labelrotation=0,
         )
 
-        axes[k].set_ylabel(args.methods[k + 1], fontsize=13, labelpad=10)
+        axes[k].set_ylabel(
+            f"Cal {args.gauge}\n{args.methods[k + 1]}", fontsize=12, labelpad=10
+        )
 
     plt.savefig(os.path.join(args.output, figname + ".png"))
 
 
-def signatures_val(
+def boxplot_signatures(
     args,
-    sign=["Ebf", "Eff", "Erc", "Epf"],
-    start_time="2016-08-01 00:00",
-    end_time="2018-08-01 00:00",
-    figname="signatures_val",
+    sign=["Eff", "Ebf", "Erc", "Elt", "Epf"],
+    figname="signatures",
     figsize=(12, 7),
 ):
     print("</> Plotting relative error of signatures...")
 
-    # load model to validate
-    model = smash.Model(
-        *load_data(
-            os.path.join(args.data, "info_bv.csv"),
-            start_time=start_time,
-            end_time=end_time,
-            desc_dir="...",
-        )
+    dfp1 = []
+    dfp2 = []
+    for mtd in args.methods:
+        with open(
+            os.path.join(args.modeldir, f"p1/{mtd}_signatures.pickle"), "rb"
+        ) as f:
+            signatures = pickle.load(f)
+            df_obs = signatures["obs"].event[sign]
+            df_sim = signatures["sim"].event[sign]
+
+            df = (df_sim - df_obs) / df_obs
+            df = df.abs()
+            df = df.add_prefix(mtd + "_")
+            codes_p1 = signatures["obs"].event["code"].to_list()
+        dfp1.append(df)
+
+        with open(
+            os.path.join(args.modeldir, f"p2/{mtd}_signatures.pickle"), "rb"
+        ) as f:
+            signatures = pickle.load(f)
+            df_obs = signatures["obs"].event[sign]
+            df_sim = signatures["sim"].event[sign]
+
+            df = (df_sim - df_obs) / df_obs
+            df = df.abs()
+            df = df.add_prefix(mtd + "_")
+            codes_p2 = signatures["obs"].event["code"].to_list()
+        dfp2.append(df)
+
+    df_reg = pd.read_csv(os.path.join(args.modeldir, "p1/scores.csv"))
+
+    dfp1 = pd.concat(dfp1, axis=1)
+    dfp1.insert(0, "code", codes_p1)
+    dfp1 = pd.merge(dfp1, df_reg[["code", "nature", "domain"]], on="code", how="left")
+
+    dfp2 = pd.concat(dfp2, axis=1)
+    dfp2.insert(0, "code", codes_p2)
+    dfp2 = pd.merge(dfp2, df_reg[["code", "nature", "domain"]], on="code", how="left")
+
+    df_merge = []
+
+    n_gauged_p1 = len(
+        dfp1[
+            dfp1["code"].isin(df_reg[df_reg["nature"] == args.gauge]["code"]).to_list()
+        ]
     )
+    n_ungauged_p1 = len(dfp1) - n_gauged_p1
+    n_gauged_p2 = len(
+        dfp2[
+            dfp2["code"].isin(df_reg[df_reg["nature"] == args.gauge]["code"]).to_list()
+        ]
+    )
+    n_ungauged_p2 = len(dfp2) - n_gauged_p2
 
-    params = model.get_bound_constraints(states=False)["names"]
+    labels_col = [
+        f"Cal ({n_gauged_p1})",
+        f"S_Val ({n_ungauged_p1})",
+        f"T_Val ({n_gauged_p2})",
+        f"S-T_Val ({n_ungauged_p2})",
+    ]
 
-    df_sign = pd.DataFrame(columns=["code", "mapping"] + sign)
+    # Create subplots
+    fig, axes = plt.subplots(1, len(sign), figsize=figsize)
+    axes[0].set_title(f"Cal {args.gauge}", loc="left")
 
-    for model_ddt, method in zip(args.models_ddt, args.methods):
-        for par in params:
-            setattr(model.parameters, par, model_ddt[par])
+    for idx, fobj in enumerate(sign):
+        # Reset df_merge for each fobj
+        df_merge = []
 
-        model.run(inplace=True)
-
-        res_sign = model.signatures(sign=sign, event_seg=dict(peak_quant=0.995))
-
-        arr_obs = res_sign.event["obs"][sign].to_numpy()
-        arr_sim = res_sign.event["sim"][sign].to_numpy()
-
-        re = np.abs(arr_sim / arr_obs - 1)
-
-        df = pd.DataFrame(data=re, columns=sign)
-
-        df.insert(loc=0, column="code", value=res_sign.event["obs"]["code"].to_list())
-        df.insert(loc=1, column="mapping", value=method)
-
-        df_sign = pd.concat([df_sign, df], ignore_index=True)
-
-    df_sign_1 = df_sign[df_sign["code"].isin(args.cal_code)]
-    df_sign_1.insert(loc=2, column="type_val", value="Temp Val")
-
-    df_sign_2 = df_sign[df_sign["code"].isin(args.val_code)]
-    df_sign_2.insert(loc=2, column="type_val", value="Spatio-Temp Val")
-
-    df_sign = pd.concat([df_sign_1, df_sign_2], ignore_index=True)
-
-    # Create the plot
-    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=figsize)
-
-    for i in range(2):
-        for j in range(2):
-            st = sign[2 * i + j]
-
-            sns.boxplot(
-                data=df_sign,
-                x="type_val",
-                y=st,
-                hue="mapping",
-                width=0.5,
-                palette="deep",
-                showfliers=True,
-                ax=axes[i, j],
-                order=["Temp Val", "Spatio-Temp Val"],
+        for i, dfsign in enumerate([dfp1, dfp2]):
+            # Melt the DataFrame to convert it to long format
+            df = pd.melt(
+                dfsign[
+                    ["code", "nature", "domain"] + [f"{m}_{fobj}" for m in args.methods]
+                ],
+                id_vars=["code", "nature", "domain"],
+                var_name="Metric",
+                value_name=f"Relative Error ({fobj})",
             )
 
-            # Set title and axis labels
-            axes[i, j].set(title=None, xlabel=None, ylabel=f"RE of {st}")
+            # Extract the mapping information from the Metric column
+            df["Mapping"] = df["Metric"].apply(lambda x: x.split("_")[0])
 
-            if i == 0:
-                axes[i, j].set_xticklabels([])
+            # Drop the Metric column
+            df = df.drop(columns=["Metric"])
 
-            if j == 1:
-                axes[i, j].set_yticklabels([])
+            # Replace "cal" and "val" in the 'domain' column
+            df["domain"] = df["domain"].replace(
+                {
+                    "cal": labels_col[0] if i == 0 else labels_col[2],
+                    "val": labels_col[1] if i == 0 else labels_col[3],
+                }
+            )
 
-            # Set y-axis limits
-            axes[i, j].set_ylim([0, 1.2])
+            df_merge.append(df)
 
-            axes[i, j].set_yticks([0, 0.2, 0.4, 0.6, 0.8, 1, 1.2])
+        df_merge = pd.concat(df_merge, ignore_index=True)
 
-            handles, labels = axes[
-                i, j
-            ].get_legend_handles_labels()  # get labels then remove
-            axes[i, j].legend([], [], frameon=False)
+        # Plot on the current subplot
+        sns.boxplot(
+            data=df_merge,
+            x="domain",
+            y=f"Relative Error ({fobj})",
+            hue="Mapping",
+            hue_order=args.methods,
+            width=0.5,
+            palette="deep",
+            showfliers=False,
+            order=labels_col,
+            ax=axes[idx],  # Set the current subplot
+        )
 
-    # Add legend
-    fig.legend(
+        axes[idx].set_xlabel(None)
+        axes[idx].set_ylabel(f"Relative Error ({fobj})", fontsize=12)
+        # Set y-axis limits
+        axes[idx].set_ylim([-0.01, 1.4])
+        axes[idx].legend().remove()
+        # Rotate x-axis labels
+        axes[idx].set_xticklabels(labels_col, rotation=15, fontsize=12)
+        # Set y-axis label fontsize
+        axes[idx].tick_params(axis="y", labelsize=12)
+
+    # Get handles and labels for legend from the last subplot
+    handles, labels = axes[-1].get_legend_handles_labels()
+
+    # Set legend for the entire figure
+    plt.legend(
         handles,
         labels,
         title=None,
         loc="upper center",
+        bbox_to_anchor=(-0.75, 1.15),
         ncol=len(args.methods),
-        fontsize=13,
+        fontsize=14,
     )
-
-    # Adjust the spacing between subplots
-    fig.subplots_adjust(wspace=0.15, hspace=0.1)
 
     plt.savefig(os.path.join(args.output, figname + ".png"))
 
 
-def compare_signature_hist(
-    args,
-    sign=["Ebf", "Eff", "Erc", "Epf"],
-    start_time="2016-08-01 00:00",
-    end_time="2018-08-01 00:00",
-    figname="compare_signature_hist",
-    figsize=(15, 8),
+def cost_gradient(
+    args, maxiter=360, figsize=(15, 9), figname="cost_projected_gradient"
 ):
-    print("</> Plotting histograms...")
+    print("</> Plotting cost and projected gradient...")
 
+    # Define colors and line styles for each method
     colors = [
-        "#4c72b0",
         "#dd8452",
         "#55a868",
-        "#c44e52",
-    ]  # corresponding colors for palette='deep
+    ]  # corresponding colors for palette='deep'
 
-    # load model to validate
-    model = smash.Model(
-        *load_data(
-            os.path.join(args.data, "info_bv.csv"),
-            start_time=start_time,
-            end_time=end_time,
-            desc_dir="...",
+    fig, axes = plt.subplots(nrows=len(args.methods[1:]), figsize=figsize)
+
+    for i, mtd in enumerate(args.methods[1:]):
+        with open(os.path.join(args.modeldir, f"p1/{mtd}_ret.pickle"), "rb") as f:
+            load_pickle = pickle.load(f)
+
+            cost = load_pickle.iter_cost
+
+            projg = load_pickle.iter_projg
+            projg = np.array(projg)[:maxiter]
+
+        axes[0].plot(
+            cost,
+            color=colors[i],
+            label=mtd,
         )
-    )
+        axes[1].plot(
+            projg,
+            color=colors[i],
+            label=mtd,
+        )
 
-    params = model.get_bound_constraints(states=False)["names"]
+    for j in range(2):
+        # Customize tick labels and grid lines
+        axes[j].tick_params(axis="both", which="major", labelsize=12, width=2, length=6)
+        axes[j].tick_params(axis="both", which="minor", labelsize=10, width=1, length=4)
+        axes[j].grid(
+            True,
+            which="major",
+            axis="both",
+            linestyle="--",
+            color="lightgray",
+            alpha=0.7,
+        )
 
-    df_sign = pd.DataFrame(columns=["code", "mapping"] + sign)
+        # Set x and y axis labels, title and legend
+        axes[j].set_xlabel("Iteration/Epoch", fontsize=14)
 
-    for model_ddt, method in zip(args.models_ddt, args.methods):
-        for par in params:
-            setattr(model.parameters, par, model_ddt[par])
+        axes[j].set_xlim([-2, maxiter])
 
-        model.run(inplace=True)
-
-        res_sign = model.signatures(sign=sign, event_seg=dict(peak_quant=0.995))
-
-        arr_obs = res_sign.event["obs"][sign].to_numpy()
-        arr_sim = res_sign.event["sim"][sign].to_numpy()
-
-        re = np.abs(arr_sim / arr_obs - 1)
-
-        df = pd.DataFrame(data=re, columns=sign)
-
-        df.insert(loc=0, column="code", value=res_sign.event["obs"]["code"].to_list())
-        df.insert(loc=1, column="mapping", value=method)
-
-        df_sign = pd.concat([df_sign, df], ignore_index=True)
-
-    df_sign = df_sign[df_sign["code"].isin(args.cal_code)]
-
-    # Create the plot
-    fig, axes = plt.subplots(nrows=len(args.methods), ncols=len(sign), figsize=figsize)
-
-    for i in range(axes.shape[0]):
-        for j in range(axes.shape[1]):
-            x = df_sign[df_sign.mapping == args.methods[i]][sign[j]]
-            x = x[np.isfinite(x)]
-
-            axes[i, j].hist(x, bins=30, color=colors[i], range=[0, 2], density=True)
-
-            # density = gaussian_kde(x)
-            # x_vals = np.linspace(x.min(), x.max(), 100)
-            # axes[i, j].plot(x_vals, density(x_vals), "black", linewidth=0.8)
-
-            axes[i, j].set_xlim([0, 1.2])
-            axes[i, j].set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1, 1.2])
-            axes[i, j].set_ylim([0, 4.5])
-            axes[i, j].axvline(np.median(x), linewidth=1.5, label="Median", c="black")
-            axes[i, j].axvline(
-                np.mean(x), linewidth=1.5, label="Mean", c="black", linestyle="--"
-            )
-            axes[i, j].set_yticklabels([])
-            axes[i, j].set_title(
-                f"med={round(np.median(x), 2)}, mean={round(np.mean(x), 2)}, std={round(np.std(x), 2)}",
-                fontsize=10,
-            )
-
-            if i < axes.shape[0] - 1:
-                axes[i, j].set_xticklabels([])
-
-            else:
-                axes[i, j].tick_params(axis="x", labelsize=10)
-                axes[i, j].set_xlabel(sign[j], fontsize=13)
-
-            if j == 0:
-                axes[i, j].set_ylabel(args.methods[i], fontsize=12)
-
-    # Add a legend to the figure
-    handles, labels = axes[0, 0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="lower center", ncol=2, fontsize=12)
+    axes[0].set_ylabel("Cost", fontsize=14)
+    axes[1].set_ylabel("Proj_G", fontsize=14)
 
     plt.savefig(os.path.join(args.output, figname + ".png"))
 
@@ -868,20 +754,21 @@ if __name__ == "__main__":
 
     args = initialize_args()
 
-    # cost_descent(args, niter=262)
+    hydrograph(args, "p1", "hydrograph_p1", 4, figsize=(10, 6.5))
+    hydrograph(args, "p2", "hydrograph_p2", 4, figsize=(10, 6.5))
 
-    hydrograph(args, "cal", "hydrograph_cal")
-    hydrograph(args, "val", "hydrograph_val")
+    boxplot_scores(args, fobj="NSE", figsize=(15, 5.5))
+    boxplot_scores(args, fobj="KGE", figsize=(15, 5.5))
 
-    radialplot(args)
-    boxplot_and_scatterplot(args)
+    boxplot_signatures(args, figsize=(18.5, 5), sign=["Erc", "Eff", "Epf"])
 
-    compare_signature_hist(args)
+    param_map(args, bounds=((150, 900), (0, 150), (-15, 5), (0, 150)))
 
-    param_map(args)
+    desc_map()
 
-    desc_map(args)
+    linear_cov(args, figsize=(5, 4))
 
-    linear_cov(args)
+    boxplot_scores_by_nature(args, fobj="NSE", figsize=(15, 5))
+    boxplot_scores_by_nature(args, fobj="KGE", figsize=(15, 5))
 
-    signatures_val(args)
+    cost_gradient(args)
