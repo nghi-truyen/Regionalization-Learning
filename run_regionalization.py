@@ -120,12 +120,12 @@ return_options = {
 
 ts_sim = time.time()
 
-if args.mapping == "uniform":
+if args.mapping == "Uniform":
     # Define optimize options
     optimizer = "sbs"
     optimize_options = {"termination_crit": dict(maxiter=100)}
 
-elif args.mapping in ["multi-linear", "multi-polynomial"]:
+elif args.mapping in ["Multi-linear", "Multi-polynomial"]:
     # First guess
     optimize_options_fg = {"termination_crit": dict(maxiter=5)}
     model.optimize(
@@ -140,7 +140,7 @@ elif args.mapping in ["multi-linear", "multi-polynomial"]:
     optimizer = "lbfgsb"
     optimize_options = {"termination_crit": dict(maxiter=250)}
 
-elif args.mapping == "ann":
+elif args.mapping == "ANN":
     # Custom Net
     net = smash.factory.Net()
 
