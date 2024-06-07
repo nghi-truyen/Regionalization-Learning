@@ -52,8 +52,8 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-if not os.path.exists(os.path.join(args.output, "local-" + args.mapping)):
-    os.makedirs(os.path.join(args.output, "local-" + args.mapping))
+if not os.path.exists(os.path.join(args.output, args.mapping)):
+    os.makedirs(os.path.join(args.output, args.mapping))
 
 
 def local_optimize(df, start_time, end_time, warmup):
@@ -69,12 +69,12 @@ def local_optimize(df, start_time, end_time, warmup):
 
     model = smash.Model(setup, mesh)
 
-    if args.mapping == "uniform":
+    if args.mapping == "Uniform":
         # Define optimize options
         optimizer = "sbs"
         optimize_options = {"termination_crit": dict(maxiter=50)}
 
-    elif args.mapping == "distributed":
+    elif args.mapping == "Distributed":
         # First guess
         optimize_options_fg = {"termination_crit": dict(maxiter=2)}
         model.optimize(
