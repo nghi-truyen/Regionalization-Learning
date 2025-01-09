@@ -1,5 +1,8 @@
 This Git repository is dedicated to performing various **multisite regionalization learning** methods, including the use of linear/polynomial mapping and Artificial Neural Network (ANN). It also includes analysis results, such as signal analysis and model parameters analysis.
 
+**Related paper:**  
+Huynh, N. N. T., Garambois, P. A., Colleoni, F., Renard, B., Roux, H., Demargne, J., Jay‐Allemand, M., & Javelle, P. (2024). *Learning regionalization using accurate spatial cost gradients within a differentiable high‐resolution hydrological model: Application to the French Mediterranean region*. **Water Resources Research, 60**(11), e2024WR037544. [https://doi.org/10.1029/2024WR037544](https://doi.org/10.1029/2024WR037544)
+
 To use this Git repository, you need to have the following requirements installed:
 - smash >= 1.0
 - Seaborn
